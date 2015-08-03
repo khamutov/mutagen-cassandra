@@ -1,114 +1,61 @@
 package com.toddfast.mutagen.cassandra.impl;
 
-import com.toddfast.mutagen.cassandra.CassandraMutagen;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import com.google.common.collect.ImmutableMap;
-import com.netflix.astyanax.AstyanaxContext;
-import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
-import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
-import com.netflix.astyanax.ddl.SchemaChangeResult;
-import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.serializers.StringSerializer;
-import com.netflix.astyanax.thrift.ThriftFamilyFactory;
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.datastax.driver.core.querybuilder.Select;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.State;
+import com.toddfast.mutagen.cassandra.EntityApplication;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.SpringApplicationConfiguration;
+import org.springframework.data.cassandra.core.CassandraOperations;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+
+import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static org.junit.Assert.*;
 
 /**
  *
  * @author Todd Fast
  */
+@RunWith(SpringJUnit4ClassRunner.class)
+@SpringApplicationConfiguration(classes = EntityApplication.class)
 public class CassandraMutagenImplTest {
 
 	public CassandraMutagenImplTest() {
 	}
 
+	@Autowired
+	private CassandraOperations cassandraOperations;
 
-	@BeforeClass
-	public static void setUpClass()
-			throws Exception {
-		defineKeyspace();
-		createKeyspace();
-	}
+    @Autowired
+    private CassandraMutagenImpl mutagen;
 
-	private static void defineKeyspace() {
-		context=new AstyanaxContext.Builder()
-			.forKeyspace("mutagen_test")
-			.withAstyanaxConfiguration(new AstyanaxConfigurationImpl()
-//					.setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
-//					.setCqlVersion("3.0.0")
-//					.setTargetCassandraVersion("1.2")
-				.setDefaultReadConsistencyLevel(ConsistencyLevel.CL_QUORUM)
-				.setDefaultWriteConsistencyLevel(ConsistencyLevel.CL_QUORUM)
-			)
-			.withConnectionPoolConfiguration(
-				new ConnectionPoolConfigurationImpl("testPool")
-				.setPort(9160)
-				.setMaxConnsPerHost(1)
-				.setSeeds("localhost")
-			)
-			.withConnectionPoolMonitor(new CountingConnectionPoolMonitor())
-			.buildKeyspace(ThriftFamilyFactory.getInstance());
+    private static Session session;
 
-		context.start();
-		keyspace=context.getClient();
-	}
+    @BeforeClass
+    public static void setUpOnce() {
+        String query = "CREATE KEYSPACE mutagen_test WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}  AND durable_writes = true";
 
-	private static void createKeyspace()
-			throws ConnectionException {
-
-		System.out.println("Creating keyspace "+keyspace+"...");
-
-		int keyspaceReplicationFactor=1;
-
-		Map<String, Object> keyspaceConfig=
-			new HashMap<String, Object>();
-		keyspaceConfig.put("strategy_options",
-			ImmutableMap.<String, Object>builder()
-				.put("replication_factor",
-					""+keyspaceReplicationFactor)
-				.build());
-
-		String keyspaceStrategyClass="SimpleStrategy";
-		keyspaceConfig.put("strategy_class",keyspaceStrategyClass);
-
-		OperationResult<SchemaChangeResult> result=
-			keyspace.createKeyspace(
-				Collections.unmodifiableMap(keyspaceConfig));
-
-		System.out.println("Created keyspace "+keyspace);
-	}
-
+        Cluster cluster = Cluster.builder().addContactPoint("127.0.0.1").build();
+        session = cluster.connect();
+        session.execute(query);
+        System.out.println("Keyspace mutagen_test created");
+    }
 
 	@AfterClass
-	public static void tearDownClass()
-			throws Exception {
-		OperationResult<SchemaChangeResult> result=keyspace.dropKeyspace();
-		System.out.println("Dropped keyspace "+keyspace);
-	}
-
-
-	@Before
-	public void setUp() {
-	}
-
-
-	@After
-	public void tearDown() {
+	public static void tearDownClass() {
+        session.execute("DROP KEYSPACE mutagen_test");
+        session.close();
+		System.out.println("Dropped keyspace mutagen_test");
 	}
 
 
@@ -119,27 +66,18 @@ public class CassandraMutagenImplTest {
 	private Plan.Result<Integer> mutate()
 			throws IOException {
 
-		// Get an instance of CassandraMutagen
-		// Using Nu: CassandraMutagen mutagen=$(CassandraMutagen.class);
-		CassandraMutagen mutagen=new CassandraMutagenImpl();
-
 		// Initialize the list of mutations
 		String rootResourcePath="com/toddfast/mutagen/cassandra/test/mutations";
 		mutagen.initialize(rootResourcePath);
 
 		// Mutate!
-		Plan.Result<Integer> result=mutagen.mutate(keyspace);
+		Plan.Result<Integer> result=mutagen.mutate();
 
 		return result;
 	}
 
 
-	/**
-	 *
-	 *
-	 */
-	@Test
-	public void testInitialize() throws Exception {
+	private void testInitialize() throws Exception {
 
 		Plan.Result<Integer> result = mutate();
 
@@ -168,42 +106,27 @@ public class CassandraMutagenImplTest {
 	@Test
 	public void testData() throws Exception {
 
-		final ColumnFamily<String,String> CF_TEST1=
-			ColumnFamily.newColumnFamily("Test1",
-				StringSerializer.get(),StringSerializer.get());
+        testInitialize();
 
-		ColumnList<String> columns;
-		columns=keyspace.prepareQuery(CF_TEST1)
-			.getKey("row1")
-			.execute()
-			.getResult();
+        Select select = QueryBuilder.select().all().from("Test1");
+        select.where(eq("key", "row1"));
+        Row row = cassandraOperations.getSession().execute(select).one();
 
-		assertEquals("foo",columns.getStringValue("value1",null));
-		assertEquals("bar",columns.getStringValue("value2",null));
+		assertEquals("foo", row.getString("value1"));
+		assertEquals("bar", row.getString("value2"));
 
-		columns=keyspace.prepareQuery(CF_TEST1)
-			.getKey("row2")
-			.execute()
-			.getResult();
+        select = QueryBuilder.select().all().from("Test1");
+        select.where(eq("key", "row2"));
+        row = cassandraOperations.getSession().execute(select).one();
 
-		assertEquals("chicken",columns.getStringValue("value1",null));
-		assertEquals("sneeze",columns.getStringValue("value2",null));
+		assertEquals("chicken", row.getString("value1"));
+		assertEquals("sneeze", row.getString("value2"));
 
-		columns=keyspace.prepareQuery(CF_TEST1)
-			.getKey("row3")
-			.execute()
-			.getResult();
+        select = QueryBuilder.select().all().from("Test1");
+        select.where(eq("key", "row3"));
+        row = cassandraOperations.getSession().execute(select).one();
 
-		assertEquals("bar",columns.getStringValue("value1",null));
-		assertEquals("baz",columns.getStringValue("value2",null));
+		assertEquals("bar", row.getString("value1"));
+		assertEquals("baz", row.getString("value2"));
 	}
-	
-	
-	
-	////////////////////////////////////////////////////////////////////////////
-	// Fields
-	////////////////////////////////////////////////////////////////////////////
-
-	private static AstyanaxContext<Keyspace> context;
-	private static Keyspace keyspace;
 }

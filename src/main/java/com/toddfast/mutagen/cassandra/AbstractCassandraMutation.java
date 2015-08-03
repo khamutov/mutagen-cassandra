@@ -1,13 +1,14 @@
 package com.toddfast.mutagen.cassandra;
 
-import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.Mutation;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.basic.SimpleState;
+import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
+import org.springframework.data.cassandra.core.CassandraOperations;
+
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -17,13 +18,16 @@ import java.security.NoSuchAlgorithmException;
  */
 public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 
-	/**
+    private final CassandraOperations cassandraOperations;
+    private final SchemaVersionDao schemaVersionDao;
+
+    /**
 	 *
 	 *
 	 */
-	protected AbstractCassandraMutation(Keyspace keyspace) {
-		super();
-		this.keyspace=keyspace;
+	protected AbstractCassandraMutation(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao) {
+        this.cassandraOperations = cassandraOperations;
+        this.schemaVersionDao = schemaVersionDao;
 	}
 
 
@@ -80,15 +84,6 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 
 
 	/**
-	 *
-	 *
-	 */
-	protected Keyspace getKeyspace() {
-		return keyspace;
-	}
-
-
-	/**
 	 * Perform the actual mutation
 	 *
 	 */
@@ -128,87 +123,12 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 			change="";
 		}
 
-		String changeHash=md5String(change);
+		String changeHash = md5String(change);
 
 		// The straightforward way, without locking
-		try {
-			MutationBatch batch=getKeyspace().prepareMutationBatch();
-			batch
-				.withRow(CassandraSubject.VERSION_CF,
-					CassandraSubject.ROW_KEY)
-				.putColumn(CassandraSubject.VERSION_COLUMN,version);
-
-			batch
-				.withRow(CassandraSubject.VERSION_CF,
-					String.format("%08d",version))
-				.putColumn("change",change)
-				.putColumn("hash",changeHash);
-
-			batch.execute();
-		}
-		catch (ConnectionException e) {
-			throw new MutagenException("Could not update \"schema_version\" "+
-				"column family to state "+version+
-				"; schema is now out of sync with recorded version",e);
-		}
-
-// TAF: Why does this fail with a StaleLockException? Do we need to use a
-// separate lock table?
-
-//		// Attempt to acquire a lock to update the version
-//		ColumnPrefixDistributedRowLock<String> lock =
-//			new ColumnPrefixDistributedRowLock<String>(getKeyspace(),
-//					CassandraSubject.VERSION_CF,CassandraSubject.VERSION_COLUMN)
-//				.withBackoff(new BoundedExponentialBackoff(250, 10000, 10))
-//				.expireLockAfter(1, TimeUnit.SECONDS)
-////				.failOnStaleLock(false);
-//				.failOnStaleLock(true);
-//
-//		try {
-//			lock.acquire();
-//		}
-//		catch (StaleLockException e) {
-//			// Won't happen
-//			throw new MutagenException("Could not update "+
-//				"\"schema_version\" column family to state "+version+
-//				" because lock expired",e);
-//		}
-//		catch (BusyLockException e) {
-//			throw new MutagenException("Could not update "+
-//				"\"schema_version\" column family to state "+version+
-//				" because another client is updating the recorded version",e);
-//		}
-//		catch (Exception e) {
-//			if (e instanceof RuntimeException) {
-//				throw (RuntimeException)e;
-//			}
-//			else {
-//				throw new MutagenException("Could not update "+
-//					"\"schema_version\" column family to state "+version+
-//					" because a write lock could not be obtained",e);
-//			}
-//		}
-//		finally {
-//			try {
-//				MutationBatch batch=getKeyspace().prepareMutationBatch();
-//				batch.withRow(CassandraSubject.VERSION_CF,
-//						CassandraSubject.ROW_KEY)
-//					.putColumn(CassandraSubject.VERSION_COLUMN,version);
-//
-//				// Release and update
-//				lock.releaseWithMutation(batch);
-//			}
-//			catch (Exception e) {
-//				if (e instanceof RuntimeException) {
-//					throw (RuntimeException)e;
-//				}
-//				else {
-//					throw new MutagenException("Could not update "+
-//						"\"schema_version\" column family to state "+version+
-//						"; schema is now out of sync with recorded version",e);
-//				}
-//			}
-//		}
+        schemaVersionDao.add("state", "version", ByteBuffer.allocate(4).putInt(version));
+        schemaVersionDao.add(String.format("%08d", version), "change", ByteBuffer.wrap(change.getBytes()));
+        schemaVersionDao.add(String.format("%08d", version), "hash", ByteBuffer.wrap(changeHash.getBytes()));
 	}
 
 
@@ -274,12 +194,7 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 		return hexString.toString();
 	}
 
-
-
-
-	////////////////////////////////////////////////////////////////////////////
-	// Fields
-	////////////////////////////////////////////////////////////////////////////
-
-	private Keyspace keyspace;
+    public CassandraOperations getCassandraOperations() {
+        return cassandraOperations;
+    }
 }

@@ -1,37 +1,40 @@
 package com.toddfast.mutagen.cassandra;
 
-import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.ddl.SchemaChangeResult;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.query.RowQuery;
-import com.netflix.astyanax.serializers.ByteBufferSerializer;
-import com.netflix.astyanax.serializers.StringSerializer;
-import com.toddfast.mutagen.MutagenException;
+import com.datastax.driver.core.TableMetadata;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.Subject;
 import com.toddfast.mutagen.basic.SimpleState;
+import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
+import com.toddfast.mutagen.cassandra.table.SchemaConstants;
+import com.toddfast.mutagen.cassandra.table.SchemaVersion;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cassandra.core.cql.CqlIdentifier;
+import org.springframework.data.cassandra.core.CassandraAdminOperations;
+import org.springframework.stereotype.Component;
+
+import java.nio.ByteBuffer;
 
 /**
  *
- * @author Todd Fast
+ * @author Todd Fast, Aleksandr Khamutov
  */
+@Component
 public class CassandraSubject implements Subject<Integer> {
 
+    @Autowired
+    private CassandraAdminOperations cassandraOperations;
+
+    @Autowired
+    private String cassandraKeyspace;
+
+    @Autowired
+    private SchemaVersionDao schemaVersionDao;
+
 	/**
 	 *
 	 *
 	 */
-	public CassandraSubject(Keyspace keyspace) {
-		super();
-		if (keyspace==null) {
-			throw new IllegalArgumentException(
-				"Parameter \"keyspace\" cannot be null");
-		}
-
-		this.keyspace=keyspace;
+	public CassandraSubject() {
 	}
 
 
@@ -39,19 +42,8 @@ public class CassandraSubject implements Subject<Integer> {
 	 *
 	 *
 	 */
-	public Keyspace getKeyspace() {
-		return keyspace;
-	}
-
-
-	/**
-	 *
-	 *
-	 */
-	private void createSchemaVersionTable()
-			throws ConnectionException {
-		OperationResult<SchemaChangeResult> result=
-			getKeyspace().createColumnFamily(VERSION_CF,null);
+	private void createSchemaVersionTable() {
+        cassandraOperations.createTable(true, new CqlIdentifier(SchemaConstants.TABLE_SCHEMA_VERSION), SchemaVersion.class, null);
 	}
 
 
@@ -62,60 +54,21 @@ public class CassandraSubject implements Subject<Integer> {
 	@Override
 	public State<Integer> getCurrentState() {
 
-		RowQuery<String,String> query=
-			getKeyspace().prepareQuery(VERSION_CF)
-				.getKey(ROW_KEY);
+        CqlIdentifier identifier = new CqlIdentifier(SchemaConstants.TABLE_SCHEMA_VERSION);
+        TableMetadata tableMetadata = cassandraOperations.getTableMetadata(cassandraKeyspace, identifier);
 
-		OperationResult<ColumnList<String>> result=null;
-		try {
-			result=query.execute();
-		}
-		catch (ConnectionException e) {
-			// Probably because the table doesn't exist
-			try {
-				createSchemaVersionTable();
-			}
-			catch (ConnectionException ex) {
-				throw new MutagenException("Could not create column family "+
-					"\"schema_version\"",ex);
-			}
-		}
+        if (tableMetadata == null) {
+            createSchemaVersionTable();
+        }
 
-		// Now try again
-		try {
-			result=query.execute();
-		}
-		catch (ConnectionException e) {
-			throw new MutagenException("Could not retrieve version from "+
-				"column family \"schema_version\"",e);
-		}
+        SchemaVersion schemaVersions = schemaVersionDao.findLastVersion();
 
-		ColumnList<String> columns=result.getResult();
-		Integer version=columns.getIntegerValue(VERSION_COLUMN,null);
-
-		if (version==null) {
-			// Most likely the column family has only just been created
-			version=0;
-		}
-
-		return new SimpleState<Integer>(version);
+        // Most likely the column family has only just been created
+        Integer version = 0;
+        if (schemaVersions != null) {
+            ByteBuffer value = schemaVersions.getValue();
+            version = value.getInt();
+        }
+        return new SimpleState<>(version);
 	}
-
-
-
-
-	////////////////////////////////////////////////////////////////////////////
-	// Fields
-	////////////////////////////////////////////////////////////////////////////
-
-	public static final ColumnFamily<String,String> VERSION_CF=
-		ColumnFamily.newColumnFamily(
-			"schema_version",
-			StringSerializer.get(),
-			StringSerializer.get(),
-			ByteBufferSerializer.get());
-	public static final String ROW_KEY="state";
-	public static final String VERSION_COLUMN="version";
-
-	private Keyspace keyspace;
 }

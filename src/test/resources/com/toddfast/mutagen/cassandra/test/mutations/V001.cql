@@ -1,4 +1,4 @@
-create columnfamily 'Test1' (
-	'key' varchar PRIMARY KEY,
-	'value1' varchar
+CREATE TABLE Test1 (
+  key varchar PRIMARY KEY,
+  value1 varchar
 );

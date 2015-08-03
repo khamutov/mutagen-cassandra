@@ -1,9 +1,5 @@
 package com.toddfast.mutagen.cassandra.impl;
 
-//import com.conga.nu.AllowField;
-//import com.conga.nu.Scope;
-//import com.conga.nu.ServiceProvider;
-import com.netflix.astyanax.Keyspace;
 import com.toddfast.mutagen.Mutation;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.Planner;
@@ -11,6 +7,11 @@ import com.toddfast.mutagen.basic.ResourceScanner;
 import com.toddfast.mutagen.cassandra.CassandraCoordinator;
 import com.toddfast.mutagen.cassandra.CassandraMutagen;
 import com.toddfast.mutagen.cassandra.CassandraSubject;
+import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.cassandra.core.CassandraOperations;
+import org.springframework.stereotype.Component;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -24,8 +25,20 @@ import java.util.regex.Pattern;
  * 
  * @author Todd Fast
  */
-//@ServiceProvider(scope=Scope.CLIENT_MANAGED)
+@Component
 public class CassandraMutagenImpl implements CassandraMutagen {
+
+	@Autowired
+	private CassandraSubject subject;
+
+	@Autowired
+	private CassandraCoordinator coordinator;
+
+	@Autowired
+	private CassandraOperations cassandraOperations;
+
+	@Autowired
+	private SchemaVersionDao schemaVersionDao;
 
 	/**
 	 * 
@@ -49,7 +62,7 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 
 			Collections.sort(discoveredResources,COMPARATOR);
 
-			resources=new ArrayList<String>();
+			resources=new ArrayList<>();
 
 			for (String resource: discoveredResources) {
 				System.out.println("Found mutation resource \""+resource+"\"");
@@ -88,15 +101,16 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 	 *
 	 */
 	@Override
-	public Plan.Result<Integer> mutate(Keyspace keyspace) {
+	public Plan.Result<Integer> mutate() {
 		// Do this in a VM-wide critical section. External cluster-wide 
 		// synchronization is going to have to happen in the coordinator.
 		synchronized (System.class) {
-			CassandraCoordinator coordinator=new CassandraCoordinator(keyspace);
-			CassandraSubject subject=new CassandraSubject(keyspace);
+			//CassandraCoordinator coordinator=new CassandraCoordinator();
+			//CassandraSubject subject=new CassandraSubject();
 
+			List<Mutation<Integer>> mutations = CassandraPlanner.loadMutations(cassandraOperations, schemaVersionDao, getResources());
 			Planner<Integer> planner=
-				new CassandraPlanner(keyspace,getResources());
+				new CassandraPlanner(mutations);
 			Plan<Integer> plan=planner.getPlan(subject,coordinator);
 
 			// Execute the plan
