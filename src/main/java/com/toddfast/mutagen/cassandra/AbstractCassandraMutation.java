@@ -126,7 +126,9 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 		String changeHash = md5String(change);
 
 		// The straightforward way, without locking
-        schemaVersionDao.add("state", "version", ByteBuffer.allocate(4).putInt(version));
+        ByteBuffer versionByteBuffer = ByteBuffer.allocate(4).putInt(version);
+        versionByteBuffer.rewind();
+        schemaVersionDao.add("state", "version", versionByteBuffer);
         schemaVersionDao.add(String.format("%08d", version), "change", ByteBuffer.wrap(change.getBytes()));
         schemaVersionDao.add(String.format("%08d", version), "hash", ByteBuffer.wrap(changeHash.getBytes()));
 	}
