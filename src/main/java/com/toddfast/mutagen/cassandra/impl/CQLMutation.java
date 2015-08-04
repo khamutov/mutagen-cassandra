@@ -5,6 +5,7 @@ import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.cassandra.AbstractCassandraMutation;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
 import org.springframework.context.ApplicationContext;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.cassandra.core.CassandraOperations;
 
 import java.io.*;
@@ -181,7 +182,13 @@ public class CQLMutation extends AbstractCassandraMutation {
 		for (String statement: statements) {
 			context.info("Executing CQL \"{}\"",statement);
 
-            getCassandraOperations().execute(statement);
+            try {
+                getCassandraOperations().execute(statement);
+            } catch (DataAccessException e) {
+                context.error("Exception executing CQL \"{}\"",statement,e);
+                throw new MutagenException("Exception executing CQL \""+
+                        statement+"\"",e);
+            }
 
             context.info("Successfully executed CQL \"{}\"", statement);
 		}
