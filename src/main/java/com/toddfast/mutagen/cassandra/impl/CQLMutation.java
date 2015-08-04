@@ -1,5 +1,6 @@
 package com.toddfast.mutagen.cassandra.impl;
 
+import com.datastax.driver.core.exceptions.DriverException;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.cassandra.AbstractCassandraMutation;
@@ -180,15 +181,18 @@ public class CQLMutation extends AbstractCassandraMutation {
 		context.debug("Executing mutation {}",state.getID());
 
 		for (String statement: statements) {
-			context.info("Executing CQL \"{}\"",statement);
+			context.debug("Executing CQL \"{}\"",statement);
 
             try {
                 getCassandraOperations().execute(statement);
-            } catch (DataAccessException e) {
+            } catch (DriverException e) {
                 context.error("Exception executing CQL \"{}\"",statement,e);
                 throw new MutagenException("Exception executing CQL \""+
                         statement+"\"",e);
-            }
+            } catch (RuntimeException e) {
+				context.error("Exception executing CQL \"{}\"",statement,e);
+				throw e;
+			}
 
             context.info("Successfully executed CQL \"{}\"", statement);
 		}

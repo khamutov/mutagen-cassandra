@@ -1,5 +1,6 @@
 package com.toddfast.mutagen.cassandra;
 
+import com.datastax.driver.core.exceptions.DriverException;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.Mutation;
 import com.toddfast.mutagen.State;
@@ -115,7 +116,16 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
         SchemaVersionDao schemaVersionDao = applicationContext.getBean(SchemaVersionDao.class);
 
 		// Perform the mutation
-		performMutation(context);
+
+		try {
+			performMutation(context);
+        } catch (DriverException e) {
+            context.error("Exception executing mutation ",e);
+            throw new MutagenException("Exception executing mutation ",e);
+        } catch (RuntimeException e) {
+            context.error("Exception executing mutation", e);
+            throw e;
+        }
 
 		int version=getResultingState().getID();
 
