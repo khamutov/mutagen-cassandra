@@ -7,6 +7,7 @@ import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.Subject;
 import com.toddfast.mutagen.basic.BasicPlanner;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.cassandra.core.CassandraOperations;
 
 import java.lang.reflect.Constructor;
@@ -34,7 +35,7 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 	 *
 	 *
 	 */
-	public static List<Mutation<Integer>> loadMutations(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao, Collection<String> resources) {
+	public static List<Mutation<Integer>> loadMutations(ApplicationContext applicationContext, Collection<String> resources) {
 
 		List<Mutation<Integer>> result=new ArrayList<Mutation<Integer>>();
 
@@ -44,12 +45,12 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 			// for SQL but not CQL
 			if (resource.endsWith(".cql") || resource.endsWith(".sql")) {
 				result.add(
-					new CQLMutation(cassandraOperations, schemaVersionDao, resource));
+					new CQLMutation(applicationContext, resource));
 			}
 			else
 			if (resource.endsWith(".class")) {
 				result.add(
-					loadMutationClass(cassandraOperations, schemaVersionDao, resource));
+					loadMutationClass(applicationContext, resource));
 			}
 			else {
 				throw new IllegalArgumentException("Unknown type for "+
@@ -65,7 +66,7 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 	 *
 	 *
 	 */
-	private static Mutation<Integer> loadMutationClass(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao, String resource) {
+	private static Mutation<Integer> loadMutationClass(ApplicationContext applicationContext, String resource) {
 
 		assert resource.endsWith(".class"):
 			"Class resource name \""+resource+"\" should end with .class";
@@ -90,8 +91,8 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 			Mutation<Integer> mutation=null;
 			try {
 				// Try a constructor taking a keyspace
-				constructor=clazz.getConstructor(CassandraOperations.class, SchemaVersionDao.class);
-				mutation=(Mutation<Integer>)constructor.newInstance(cassandraOperations, schemaVersionDao);
+				constructor=clazz.getConstructor(ApplicationContext.class);
+				mutation=(Mutation<Integer>)constructor.newInstance(applicationContext);
 			}
 			catch (NoSuchMethodException e) {
 				// Wrong assumption

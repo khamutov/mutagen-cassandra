@@ -4,6 +4,7 @@ import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.cassandra.AbstractCassandraMutation;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.cassandra.core.CassandraOperations;
 
 import java.io.*;
@@ -20,8 +21,8 @@ public class CQLMutation extends AbstractCassandraMutation {
 	 * 
 	 * 
 	 */
-	public CQLMutation(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao, String resourceName) {
-		super(cassandraOperations, schemaVersionDao);
+	public CQLMutation(ApplicationContext applicationContext, String resourceName) {
+		super(applicationContext);
 		state = super.parseVersion(resourceName);
 		loadCQLStatements(resourceName);
 	}

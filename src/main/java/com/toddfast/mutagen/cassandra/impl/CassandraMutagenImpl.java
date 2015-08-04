@@ -9,6 +9,7 @@ import com.toddfast.mutagen.cassandra.CassandraMutagen;
 import com.toddfast.mutagen.cassandra.CassandraSubject;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.cassandra.core.CassandraOperations;
 import org.springframework.stereotype.Component;
 
@@ -39,6 +40,9 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 
 	@Autowired
 	private SchemaVersionDao schemaVersionDao;
+
+    @Autowired
+    private ApplicationContext applicationContext;
 
 	/**
 	 * 
@@ -108,7 +112,7 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 			//CassandraCoordinator coordinator=new CassandraCoordinator();
 			//CassandraSubject subject=new CassandraSubject();
 
-			List<Mutation<Integer>> mutations = CassandraPlanner.loadMutations(cassandraOperations, schemaVersionDao, getResources());
+			List<Mutation<Integer>> mutations = CassandraPlanner.loadMutations(applicationContext, getResources());
 			Planner<Integer> planner=
 				new CassandraPlanner(mutations);
 			Plan<Integer> plan=planner.getPlan(subject,coordinator);
