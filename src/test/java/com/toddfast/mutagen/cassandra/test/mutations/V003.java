@@ -6,7 +6,8 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.basic.SimpleState;
 import com.toddfast.mutagen.cassandra.AbstractCassandraMutation;
-import org.springframework.context.ApplicationContext;
+import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
+import org.springframework.data.cassandra.core.CassandraOperations;
 
 /**
  *
@@ -14,15 +15,10 @@ import org.springframework.context.ApplicationContext;
  */
 public class V003 extends AbstractCassandraMutation {
 
-	/**
-	 *
-	 *
-	 */
-	public V003(ApplicationContext applicationContext) {
-		super(applicationContext);
+	public V003(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao) {
+		super(cassandraOperations, schemaVersionDao);
 		state=new SimpleState<>(3);
 	}
-
 
 	@Override
 	public State<Integer> getResultingState() {

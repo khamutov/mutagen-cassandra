@@ -26,23 +26,22 @@ import java.util.regex.Pattern;
  * 
  * @author Todd Fast
  */
-@Component
 public class CassandraMutagenImpl implements CassandraMutagen {
 
-	@Autowired
 	private CassandraSubject subject;
 
-	@Autowired
 	private CassandraCoordinator coordinator;
 
-	@Autowired
-	private CassandraOperations cassandraOperations;
+    private SchemaVersionDao schemaVersionDao;
 
-	@Autowired
-	private SchemaVersionDao schemaVersionDao;
+    private CassandraOperations cassandraOperations;
 
-    @Autowired
-    private ApplicationContext applicationContext;
+	public CassandraMutagenImpl(CassandraSubject subject, CassandraCoordinator coordinator, CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao) {
+		this.subject = subject;
+		this.coordinator = coordinator;
+        this.schemaVersionDao = schemaVersionDao;
+        this.cassandraOperations = cassandraOperations;
+	}
 
 	/**
 	 * 
@@ -112,7 +111,7 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 			//CassandraCoordinator coordinator=new CassandraCoordinator();
 			//CassandraSubject subject=new CassandraSubject();
 
-			List<Mutation<Integer>> mutations = CassandraPlanner.loadMutations(applicationContext, getResources());
+			List<Mutation<Integer>> mutations = CassandraPlanner.loadMutations(cassandraOperations, schemaVersionDao, getResources());
 			Planner<Integer> planner=
 				new CassandraPlanner(mutations);
 			Plan<Integer> plan=planner.getPlan(subject,coordinator);
@@ -183,6 +182,5 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 			}
 		};
 
-//	@AllowField
 	private List<String> resources;
 }

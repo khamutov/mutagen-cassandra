@@ -6,7 +6,6 @@ import com.toddfast.mutagen.Mutation;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.basic.SimpleState;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
-import org.springframework.context.ApplicationContext;
 import org.springframework.data.cassandra.core.CassandraOperations;
 
 import java.io.UnsupportedEncodingException;
@@ -20,14 +19,16 @@ import java.security.NoSuchAlgorithmException;
  */
 public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 
-    private ApplicationContext applicationContext;
+	private SchemaVersionDao schemaVersionDao;
+	private CassandraOperations cassandraOperations;
 
     /**
 	 *
 	 *
 	 */
-	protected AbstractCassandraMutation(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
+	protected AbstractCassandraMutation(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao) {
+        this.cassandraOperations = cassandraOperations;
+		this.schemaVersionDao = schemaVersionDao;
 	}
 
 
@@ -112,8 +113,6 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 	@Override
 	public final void mutate(Context context)
 			throws MutagenException {
-
-        SchemaVersionDao schemaVersionDao = applicationContext.getBean(SchemaVersionDao.class);
 
 		// Perform the mutation
 
@@ -208,10 +207,6 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 	}
 
     public CassandraOperations getCassandraOperations() {
-        return applicationContext.getBean(CassandraOperations.class);
-    }
-
-    public ApplicationContext getApplicationContext() {
-        return applicationContext;
+        return cassandraOperations;
     }
 }

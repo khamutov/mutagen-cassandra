@@ -4,20 +4,20 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.toddfast.mutagen.cassandra.table.SchemaConstants;
 import com.toddfast.mutagen.cassandra.table.SchemaVersion;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.cassandra.core.CassandraOperations;
-import org.springframework.stereotype.Component;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
-@Component
 public class SchemaVersionDao {
 
-    @Autowired
     private CassandraOperations cassandraOperations;
+
+    public SchemaVersionDao(CassandraOperations cassandraOperations) {
+        this.cassandraOperations = cassandraOperations;
+    }
 
     public List<SchemaVersion> findAll() {
         Select select = QueryBuilder.select().from(SchemaConstants.TABLE_SCHEMA_VERSION);

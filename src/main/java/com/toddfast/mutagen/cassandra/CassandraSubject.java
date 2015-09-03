@@ -7,10 +7,8 @@ import com.toddfast.mutagen.basic.SimpleState;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
 import com.toddfast.mutagen.cassandra.table.SchemaConstants;
 import com.toddfast.mutagen.cassandra.table.SchemaVersion;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cassandra.core.cql.CqlIdentifier;
 import org.springframework.data.cassandra.core.CassandraAdminOperations;
-import org.springframework.stereotype.Component;
 
 import java.nio.ByteBuffer;
 
@@ -18,34 +16,24 @@ import java.nio.ByteBuffer;
  *
  * @author Todd Fast, Aleksandr Khamutov
  */
-@Component
 public class CassandraSubject implements Subject<Integer> {
 
-    @Autowired
     private CassandraAdminOperations cassandraOperations;
 
-    @Autowired
-    private String cassandraKeyspace;
-
-    @Autowired
     private SchemaVersionDao schemaVersionDao;
 
-	/**
-	 *
-	 *
-	 */
-	public CassandraSubject() {
-	}
+    public CassandraSubject(CassandraAdminOperations cassandraOperations, SchemaVersionDao schemaVersionDao) {
+        this.cassandraOperations = cassandraOperations;
+        this.schemaVersionDao = schemaVersionDao;
+    }
 
-
-	/**
+    /**
 	 *
 	 *
 	 */
 	private void createSchemaVersionTable() {
         cassandraOperations.createTable(true, new CqlIdentifier(SchemaConstants.TABLE_SCHEMA_VERSION), SchemaVersion.class, null);
 	}
-
 
 	/**
 	 * 
@@ -55,7 +43,8 @@ public class CassandraSubject implements Subject<Integer> {
 	public State<Integer> getCurrentState() {
 
         CqlIdentifier identifier = new CqlIdentifier(SchemaConstants.TABLE_SCHEMA_VERSION);
-        TableMetadata tableMetadata = cassandraOperations.getTableMetadata(cassandraKeyspace, identifier);
+
+        TableMetadata tableMetadata = cassandraOperations.getTableMetadata(cassandraOperations.getSession().getLoggedKeyspace(), identifier);
 
         if (tableMetadata == null) {
             createSchemaVersionTable();

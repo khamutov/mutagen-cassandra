@@ -7,54 +7,57 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.State;
-import com.toddfast.mutagen.cassandra.EntityApplication;
+import com.toddfast.mutagen.cassandra.CassandraCoordinator;
+import com.toddfast.mutagen.cassandra.CassandraSubject;
+import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
+import org.cassandraunit.AbstractCassandraUnit4TestCase;
+import org.cassandraunit.dataset.DataSet;
+import org.cassandraunit.dataset.yaml.ClassPathYamlDataSet;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.SpringApplicationConfiguration;
+import org.springframework.data.cassandra.convert.CassandraConverter;
+import org.springframework.data.cassandra.convert.MappingCassandraConverter;
+import org.springframework.data.cassandra.core.CassandraAdminOperations;
+import org.springframework.data.cassandra.core.CassandraAdminTemplate;
 import org.springframework.data.cassandra.core.CassandraOperations;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.data.cassandra.core.CassandraTemplate;
+import org.springframework.data.cassandra.mapping.BasicCassandraMappingContext;
 
 import java.io.IOException;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static org.junit.Assert.*;
 
-/**
- *
- * @author Todd Fast
- */
-@RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = EntityApplication.class)
-public class CassandraMutagenImplTest {
+public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
 
-	public CassandraMutagenImplTest() {
+    private static Cluster cluster;
+
+    public CassandraMutagenImplTest() {
 	}
 
-	@Autowired
-	private CassandraOperations cassandraOperations;
-
-    @Autowired
-    private CassandraMutagenImpl mutagen;
-
-    private static Session session;
+    @Override
+    public DataSet getDataSet() {
+        return new ClassPathYamlDataSet("keyspaceDataSet.yml");
+    }
 
     @BeforeClass
     public static void setUpOnce() {
-        String query = "CREATE KEYSPACE mutagen_test WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}  AND durable_writes = true";
+        //String query = "CREATE KEYSPACE mutagen_test WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}  AND durable_writes = true";
 
-        Cluster cluster = Cluster.builder().addContactPoint("127.0.0.1").build();
-        session = cluster.connect();
+        cluster = Cluster.builder().addContactPoint("127.0.0.1").withPort(9142).build();
+        /*session = cluster.connect();
         session.execute(query);
-        System.out.println("Keyspace mutagen_test created");
+        System.out.println("Keyspace mutagen_test created");*/
     }
 
 	@AfterClass
 	public static void tearDownClass() {
-        session.execute("DROP KEYSPACE mutagen_test");
-        session.close();
+        System.out.println("1111111111111111");
+        cluster.close();
+        System.out.println("1111111111111111");
+        //session.execute("DROP KEYSPACE mutagen_test");
+        //session.close();
 		System.out.println("Dropped keyspace mutagen_test");
 	}
 
@@ -68,12 +71,22 @@ public class CassandraMutagenImplTest {
 
 		// Initialize the list of mutations
 		String rootResourcePath="com/toddfast/mutagen/cassandra/test/mutations";
+
+        Session localSession = cluster.connect("mutagen_test");
+        CassandraConverter converter = new MappingCassandraConverter(new BasicCassandraMappingContext());
+        CassandraAdminOperations cassandraAdminOperations = new CassandraAdminTemplate(localSession, converter);
+        SchemaVersionDao schemaVersionDao = new SchemaVersionDao(cassandraAdminOperations);
+        CassandraSubject cassandraSubject = new CassandraSubject(cassandraAdminOperations, schemaVersionDao);
+        CassandraCoordinator cassandraCoordinator = new CassandraCoordinator();
+        CassandraMutagenImpl mutagen = new CassandraMutagenImpl(cassandraSubject, cassandraCoordinator, cassandraAdminOperations, schemaVersionDao);
 		mutagen.initialize(rootResourcePath);
 
 		// Mutate!
-		Plan.Result<Integer> result=mutagen.mutate();
 
-		return result;
+        Plan.Result<Integer> result = mutagen.mutate();
+        localSession.close();
+
+        return result;
 	}
 
 
@@ -107,6 +120,8 @@ public class CassandraMutagenImplTest {
 	public void testData() throws Exception {
 
         testInitialize();
+        Session localSession = cluster.connect("mutagen_test");
+        CassandraOperations cassandraOperations = new CassandraTemplate(localSession);
 
         Select select = QueryBuilder.select().all().from("Test1");
         select.where(eq("key", "row1"));
@@ -128,5 +143,7 @@ public class CassandraMutagenImplTest {
 
 		assertEquals("bar", row.getString("value1"));
 		assertEquals("baz", row.getString("value2"));
+
+        localSession.close();
 	}
 }
