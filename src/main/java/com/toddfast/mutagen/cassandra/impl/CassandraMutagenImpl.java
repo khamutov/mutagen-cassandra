@@ -10,6 +10,7 @@ import com.toddfast.mutagen.cassandra.CassandraSubject;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.data.cassandra.core.CassandraAdminOperations;
 import org.springframework.data.cassandra.core.CassandraOperations;
 import org.springframework.stereotype.Component;
 
@@ -29,19 +30,16 @@ import java.util.regex.Pattern;
 public class CassandraMutagenImpl implements CassandraMutagen {
 
 	private CassandraSubject subject;
-
 	private CassandraCoordinator coordinator;
-
     private SchemaVersionDao schemaVersionDao;
-
     private CassandraOperations cassandraOperations;
 
-	public CassandraMutagenImpl(CassandraSubject subject, CassandraCoordinator coordinator, CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao) {
-		this.subject = subject;
-		this.coordinator = coordinator;
-        this.schemaVersionDao = schemaVersionDao;
+	public CassandraMutagenImpl(CassandraAdminOperations cassandraOperations) {
         this.cassandraOperations = cassandraOperations;
-	}
+        this.coordinator = new CassandraCoordinator();
+        this.schemaVersionDao = new SchemaVersionDao(cassandraOperations);
+        this.subject = new CassandraSubject(cassandraOperations, schemaVersionDao);
+    }
 
 	/**
 	 * 
@@ -108,17 +106,13 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 		// Do this in a VM-wide critical section. External cluster-wide 
 		// synchronization is going to have to happen in the coordinator.
 		synchronized (System.class) {
-			//CassandraCoordinator coordinator=new CassandraCoordinator();
-			//CassandraSubject subject=new CassandraSubject();
-
 			List<Mutation<Integer>> mutations = CassandraPlanner.loadMutations(cassandraOperations, schemaVersionDao, getResources());
 			Planner<Integer> planner=
 				new CassandraPlanner(mutations);
 			Plan<Integer> plan=planner.getPlan(subject,coordinator);
 
 			// Execute the plan
-			Plan.Result<Integer> result=plan.execute();
-			return result;
+            return plan.execute();
 		}
 	}
 
@@ -134,53 +128,47 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 	 *
 	 */
 	private static final Comparator<String> COMPARATOR=
-		new Comparator<String>() {
-			@Override
-			public int compare(String path1, String path2) {
-				final String origPath1=path1;
-				final String origPath2=path2;
+            (path1, path2) -> {
 
-				try {
+                try {
 
-					int index1=path1.lastIndexOf("/");
-					int index2=path2.lastIndexOf("/");
+                    int index1=path1.lastIndexOf("/");
+                    int index2=path2.lastIndexOf("/");
 
-					String file1;
-					if (index1!=-1) {
-						file1=path1.substring(index1+1);
-					}
-					else {
-						file1=path1;
-					}
+                    String file1;
+                    if (index1!=-1) {
+                        file1=path1.substring(index1+1);
+                    }
+                    else {
+                        file1=path1;
+                    }
 
-					String file2;
-					if (index2!=-1) {
-						file2=path2.substring(index2+1);
-					}
-					else {
-						file2=path2;
-					}
+                    String file2;
+                    if (index2!=-1) {
+                        file2=path2.substring(index2+1);
+                    }
+                    else {
+                        file2=path2;
+                    }
 
-					index1=file1.lastIndexOf(".");
-					index2=file2.lastIndexOf(".");
+                    index1=file1.lastIndexOf(".");
+                    index2=file2.lastIndexOf(".");
 
-					if (index1 > 1) {
-						file1=file1.substring(0,index1);
-					}
+                    if (index1 > 1) {
+                        file1=file1.substring(0,index1);
+                    }
 
-					if (index2 > 1) {
-						file2=file2.substring(0,index2);
-					}
+                    if (index2 > 1) {
+                        file2=file2.substring(0,index2);
+                    }
 
-					return file1.compareTo(file2);
-				}
-				catch (StringIndexOutOfBoundsException e) {
-					throw new StringIndexOutOfBoundsException(e.getMessage()+
-						" (path1: \""+origPath1+
-						"\", path2: \""+origPath2+"\")");
-				}
-			}
-		};
+                    return file1.compareTo(file2);
+                } catch (StringIndexOutOfBoundsException e) {
+                    throw new StringIndexOutOfBoundsException(e.getMessage()+
+                        " (path1: \""+ path1 +
+                        "\", path2: \""+ path2 +"\")");
+                }
+            };
 
 	private List<String> resources;
 }

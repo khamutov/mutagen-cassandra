@@ -7,9 +7,6 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.State;
-import com.toddfast.mutagen.cassandra.CassandraCoordinator;
-import com.toddfast.mutagen.cassandra.CassandraSubject;
-import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
 import org.cassandraunit.AbstractCassandraUnit4TestCase;
 import org.cassandraunit.dataset.DataSet;
 import org.cassandraunit.dataset.yaml.ClassPathYamlDataSet;
@@ -43,21 +40,12 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
 
     @BeforeClass
     public static void setUpOnce() {
-        //String query = "CREATE KEYSPACE mutagen_test WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}  AND durable_writes = true";
-
         cluster = Cluster.builder().addContactPoint("127.0.0.1").withPort(9142).build();
-        /*session = cluster.connect();
-        session.execute(query);
-        System.out.println("Keyspace mutagen_test created");*/
     }
 
 	@AfterClass
 	public static void tearDownClass() {
-        System.out.println("1111111111111111");
         cluster.close();
-        System.out.println("1111111111111111");
-        //session.execute("DROP KEYSPACE mutagen_test");
-        //session.close();
 		System.out.println("Dropped keyspace mutagen_test");
 	}
 
@@ -75,10 +63,8 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
         Session localSession = cluster.connect("mutagen_test");
         CassandraConverter converter = new MappingCassandraConverter(new BasicCassandraMappingContext());
         CassandraAdminOperations cassandraAdminOperations = new CassandraAdminTemplate(localSession, converter);
-        SchemaVersionDao schemaVersionDao = new SchemaVersionDao(cassandraAdminOperations);
-        CassandraSubject cassandraSubject = new CassandraSubject(cassandraAdminOperations, schemaVersionDao);
-        CassandraCoordinator cassandraCoordinator = new CassandraCoordinator();
-        CassandraMutagenImpl mutagen = new CassandraMutagenImpl(cassandraSubject, cassandraCoordinator, cassandraAdminOperations, schemaVersionDao);
+
+        CassandraMutagenImpl mutagen = new CassandraMutagenImpl(cassandraAdminOperations);
 		mutagen.initialize(rootResourcePath);
 
 		// Mutate!
