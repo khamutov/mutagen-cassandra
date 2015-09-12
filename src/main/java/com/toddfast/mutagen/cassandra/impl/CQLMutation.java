@@ -5,10 +5,11 @@ import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.cassandra.AbstractCassandraMutation;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
-import org.springframework.dao.DataAccessException;
+import org.apache.commons.io.IOUtils;
 import org.springframework.data.cassandra.core.CassandraOperations;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,9 +19,11 @@ import java.util.List;
  */
 public class CQLMutation extends AbstractCassandraMutation {
 
+    public static final Charset UTF8 = Charset.forName("UTF-8");
+
 	/**
-	 * 
-	 * 
+	 *
+	 *
 	 */
 	public CQLMutation(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao, String resourceName) {
 		super(cassandraOperations, schemaVersionDao);
@@ -77,7 +80,7 @@ public class CQLMutation extends AbstractCassandraMutation {
 					.append("\n")
 					.append(line.substring(0,index+1));
 				statements.add(statement.toString());
-				
+
 				if (line.length() > index+1) {
 					statement=new StringBuilder(line.substring(index+1));
 				}
@@ -123,42 +126,16 @@ public class CQLMutation extends AbstractCassandraMutation {
 		}
 
 		try {
-			input=new BufferedInputStream(input);
-			return loadResource(input);
+			//todo: need refactoring
+			// isn't good solution, because OOM may occurred on reading big CQL file
+			// but more better than incomplete read of the file SILENTLY
+			return IOUtils.toString(input, UTF8);
 		}
 		finally {
-			try {
-                input.close();
-            }
-			catch (IOException e) {
-				// Ignore
-			}
+			IOUtils.closeQuietly(input);
 		}
 	}
 
-
-	/**
-	 *
-	 *
-	 */
-	public String loadResource(InputStream input)
-			throws IOException {
-
-		String result=null;
-		int available=input.available();
-		if (available > 0) {
-			// Read max 64k. This is a damn lazy implementation...
-			final int MAX_BYTES=65535;
-
-			// Read all available bytes in one chunk
-			byte[] buffer=new byte[Math.min(available,MAX_BYTES)];
-			int numRead=input.read(buffer);
-
-			result=new String(buffer,0,numRead,"UTF-8");
-		}
-
-		return result;
-	}
 
 
 	/**

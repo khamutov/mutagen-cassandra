@@ -9,7 +9,7 @@
 
 	<groupId>com.toddfast.mutagen</groupId>
 	<artifactId>spring-mutagen-cassandra</artifactId>
-	<version>0.4.2-SNAPSHOT</version>
+	<version>0.4.3-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>toddfast-mutagen-cassandra</name>
@@ -100,6 +100,12 @@
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-beans</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.4</version>
 		</dependency>
 
 		<dependency>
