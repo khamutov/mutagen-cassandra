@@ -33,15 +33,21 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 	private CassandraCoordinator coordinator;
     private SchemaVersionDao schemaVersionDao;
     private CassandraOperations cassandraOperations;
+    private CassandraMutagenConfig config;
 
-	public CassandraMutagenImpl(CassandraAdminOperations cassandraOperations) {
+    public CassandraMutagenImpl(CassandraAdminOperations cassandraOperations, CassandraMutagenConfig config) {
         this.cassandraOperations = cassandraOperations;
-        this.coordinator = new CassandraCoordinator();
+        this.config = config.copy();
+        this.coordinator = new CassandraCoordinator(this.config);
         this.schemaVersionDao = new SchemaVersionDao(cassandraOperations);
         this.subject = new CassandraSubject(cassandraOperations, schemaVersionDao);
     }
 
-	/**
+    public CassandraMutagenImpl(CassandraAdminOperations cassandraOperations) {
+        this(cassandraOperations, new CassandraMutagenConfig());
+    }
+
+    /**
 	 * 
 	 * 
 	 */
@@ -106,7 +112,7 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 		// Do this in a VM-wide critical section. External cluster-wide 
 		// synchronization is going to have to happen in the coordinator.
 		synchronized (System.class) {
-			List<Mutation<Integer>> mutations = CassandraPlanner.loadMutations(cassandraOperations, schemaVersionDao, getResources());
+			List<Mutation<Integer>> mutations = CassandraPlanner.loadMutations(cassandraOperations, schemaVersionDao, config, getResources());
 			Planner<Integer> planner=
 				new CassandraPlanner(mutations);
 			Plan<Integer> plan=planner.getPlan(subject,coordinator);

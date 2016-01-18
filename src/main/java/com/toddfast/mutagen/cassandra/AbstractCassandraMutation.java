@@ -6,6 +6,7 @@ import com.toddfast.mutagen.Mutation;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.basic.SimpleState;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
+import com.toddfast.mutagen.cassandra.impl.CassandraMutagenConfig;
 import org.springframework.data.cassandra.core.CassandraOperations;
 
 import java.io.UnsupportedEncodingException;
@@ -20,6 +21,7 @@ import java.security.NoSuchAlgorithmException;
 public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 
 	private SchemaVersionDao schemaVersionDao;
+	private CassandraMutagenConfig config;
 	private CassandraOperations cassandraOperations;
 
     /**
@@ -29,10 +31,14 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 	protected AbstractCassandraMutation(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao) {
         this.cassandraOperations = cassandraOperations;
 		this.schemaVersionDao = schemaVersionDao;
+		this.config = new CassandraMutagenConfig();
 	}
 
+    public void setConfig(CassandraMutagenConfig config) {
+        this.config = config;
+    }
 
-	/**
+    /**
 	 *
 	 *
 	 */
@@ -67,20 +73,17 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 		for (Character c: versionString.toCharArray()) {
 			// Skip all initial non-digit characters
 			if (!Character.isDigit(c)) {
-				if (buffer.length()==0) {
-					continue;
-				}
-				else {
-					// End when we reach the first non-digit
-					break;
-				}
-			}
+                if (buffer.length() != 0) {
+                    // End when we reach the first non-digit
+                    break;
+                }
+            }
 			else {
 				buffer.append(c);
 			}
 		}
 
-		return new SimpleState<Integer>(Integer.parseInt(buffer.toString()));
+		return new SimpleState<>(Integer.parseInt(buffer.toString()));
 	}
 
 
@@ -115,32 +118,39 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 			throws MutagenException {
 
 		// Perform the mutation
-
-		try {
-			performMutation(context);
-        } catch (DriverException e) {
-            context.error("Exception executing mutation ",e);
-            throw new MutagenException("Exception executing mutation ",e);
-        } catch (RuntimeException e) {
-            context.error("Exception executing mutation", e);
-            throw e;
+		if (config.getMode() == CassandraMutagenConfig.Mode.FORCE_VERSION) {
+            context.info("[Force version mode] Skipping mutation [{}]", config.getMutation());
+        } else {
+            try {
+                performMutation(context);
+            } catch (DriverException e) {
+                context.error("Exception executing mutation ", e);
+                throw new MutagenException("Exception executing mutation ", e);
+            } catch (RuntimeException e) {
+                context.error("Exception executing mutation", e);
+                throw e;
+            }
         }
 
-		int version=getResultingState().getID();
+        if (config.getMode() == CassandraMutagenConfig.Mode.FORCE) {
+            context.info("[Force mode] Skipping version insertion [{}]", config.getMutation());
+        } else {
+            int version = getResultingState().getID();
 
-		String change=getChangeSummary();
-		if (change==null) {
-			change="";
-		}
+            String change = getChangeSummary();
+            if (change == null) {
+                change = "";
+            }
 
-		String changeHash = md5String(change);
+            String changeHash = md5String(change);
 
-		// The straightforward way, without locking
-        ByteBuffer versionByteBuffer = ByteBuffer.allocate(4).putInt(version);
-        versionByteBuffer.rewind();
-        schemaVersionDao.add("state", "version", versionByteBuffer);
-        schemaVersionDao.add(String.format("%08d", version), "change", ByteBuffer.wrap(change.getBytes()));
-        schemaVersionDao.add(String.format("%08d", version), "hash", ByteBuffer.wrap(changeHash.getBytes()));
+            // The straightforward way, without locking
+            ByteBuffer versionByteBuffer = ByteBuffer.allocate(4).putInt(version);
+            versionByteBuffer.rewind();
+            schemaVersionDao.add("state", "version", versionByteBuffer);
+            schemaVersionDao.add(String.format("%08d", version), "change", ByteBuffer.wrap(change.getBytes()));
+            schemaVersionDao.add(String.format("%08d", version), "hash", ByteBuffer.wrap(changeHash.getBytes()));
+        }
 	}
 
 
