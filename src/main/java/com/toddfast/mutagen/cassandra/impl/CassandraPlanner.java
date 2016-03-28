@@ -6,6 +6,7 @@ import com.toddfast.mutagen.Mutation;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.Subject;
 import com.toddfast.mutagen.basic.BasicPlanner;
+import com.toddfast.mutagen.cassandra.AbstractCassandraMutation;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.cassandra.core.CassandraOperations;
@@ -35,22 +36,23 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 	 *
 	 *
 	 */
-	public static List<Mutation<Integer>> loadMutations(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao, Collection<String> resources) {
+	public static List<Mutation<Integer>> loadMutations(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao, CassandraMutagenConfig config, Collection<String> resources) {
 
-		List<Mutation<Integer>> result=new ArrayList<Mutation<Integer>>();
+		List<Mutation<Integer>> result = new ArrayList<>();
 
 		for (String resource: resources) {
 
 			// Allow .sql files because some editors have syntax highlighting
 			// for SQL but not CQL
 			if (resource.endsWith(".cql") || resource.endsWith(".sql")) {
-				result.add(
-					new CQLMutation(cassandraOperations, schemaVersionDao, resource));
+				CQLMutation mutation = new CQLMutation(cassandraOperations, schemaVersionDao, resource);
+				mutation.setConfig(config);
+				result.add(mutation);
 			}
 			else
 			if (resource.endsWith(".class")) {
 				result.add(
-					loadMutationClass(cassandraOperations, schemaVersionDao, resource));
+					loadMutationClass(cassandraOperations, schemaVersionDao, config, resource));
 			}
 			else {
 				throw new IllegalArgumentException("Unknown type for "+
@@ -66,7 +68,7 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 	 *
 	 *
 	 */
-	private static Mutation<Integer> loadMutationClass(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao, String resource) {
+	private static Mutation<Integer> loadMutationClass(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao, CassandraMutagenConfig config, String resource) {
 
 		assert resource.endsWith(".class"):
 			"Class resource name \""+resource+"\" should end with .class";
@@ -78,6 +80,9 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 		Class<?> clazz=null;
 		try {
 			clazz=Class.forName(className);
+            if (!AbstractCassandraMutation.class.isAssignableFrom(clazz)) {
+                throw new MutagenException("Class [" + resource + "] doesn't inherit AbstractCassandraMutation");
+            }
 		}
 		catch (ClassNotFoundException e) {
 			// Should never happen
@@ -88,11 +93,12 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 		// Instantiate the class
 		try {
 			Constructor<?> constructor;
-			Mutation<Integer> mutation=null;
+			AbstractCassandraMutation mutation=null;
+
 			try {
 				// Try a constructor taking a keyspace
 				constructor = clazz.getConstructor(CassandraOperations.class, SchemaVersionDao.class);
-				mutation = (Mutation<Integer>) constructor.newInstance(cassandraOperations, schemaVersionDao);
+				mutation = (AbstractCassandraMutation) constructor.newInstance(cassandraOperations, schemaVersionDao);
 			}
 			catch (NoSuchMethodException e) {
 				// Wrong assumption
@@ -102,13 +108,15 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 				// Try the null constructor
 				try {
 					constructor=clazz.getConstructor();
-					mutation=(Mutation<Integer>)constructor.newInstance();
+					mutation=(AbstractCassandraMutation) constructor.newInstance();
 				}
 				catch (NoSuchMethodException e) {
 					throw new MutagenException("Could not find comparible "+
 						"constructor for class \""+className+"\"",e);
 				}
 			}
+
+            mutation.setConfig(config);
 
 			return mutation;
 		}

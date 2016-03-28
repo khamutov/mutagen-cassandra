@@ -7,28 +7,33 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.State;
+import com.toddfast.mutagen.cassandra.table.SchemaConstants;
 import org.cassandraunit.AbstractCassandraUnit4TestCase;
 import org.cassandraunit.dataset.DataSet;
 import org.cassandraunit.dataset.yaml.ClassPathYamlDataSet;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.springframework.cassandra.core.keyspace.DropTableSpecification;
 import org.springframework.data.cassandra.convert.CassandraConverter;
 import org.springframework.data.cassandra.convert.MappingCassandraConverter;
 import org.springframework.data.cassandra.core.CassandraAdminOperations;
 import org.springframework.data.cassandra.core.CassandraAdminTemplate;
-import org.springframework.data.cassandra.core.CassandraOperations;
-import org.springframework.data.cassandra.core.CassandraTemplate;
 import org.springframework.data.cassandra.mapping.BasicCassandraMappingContext;
 
 import java.io.IOException;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 import static org.junit.Assert.*;
 
 public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
 
     private static Cluster cluster;
+    private static CassandraAdminOperations cassandraOperations;
+    private static Session localSession;
 
     public CassandraMutagenImplTest() {
 	}
@@ -41,73 +46,152 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
     @BeforeClass
     public static void setUpOnce() {
         cluster = Cluster.builder().addContactPoint("127.0.0.1").withPort(9142).build();
+
     }
 
-	@AfterClass
+    @AfterClass
 	public static void tearDownClass() {
         cluster.close();
 		System.out.println("Dropped keyspace mutagen_test");
 	}
 
+    @Before
+    public void setUp() throws Exception {
+        localSession = cluster.connect("mutagen_test");
+        CassandraConverter converter = new MappingCassandraConverter(new BasicCassandraMappingContext());
+        cassandraOperations = new CassandraAdminTemplate(localSession, converter);
+    }
 
-	/**
+    @After
+    public void tearDown() throws Exception {
+        cassandraOperations.execute(DropTableSpecification.dropTable("Test1"));
+        cassandraOperations.execute(DropTableSpecification.dropTable(SchemaConstants.TABLE_SCHEMA_VERSION));
+        localSession.close();
+    }
+
+    /**
 	 * This is it!
 	 *
-	 */
-	private Plan.Result<Integer> mutate()
+     * @param config
+     */
+	private Plan.Result<Integer> mutate(CassandraMutagenConfig config)
 			throws IOException {
 
 		// Initialize the list of mutations
 		String rootResourcePath="com/toddfast/mutagen/cassandra/test/mutations";
 
-        Session localSession = cluster.connect("mutagen_test");
-        CassandraConverter converter = new MappingCassandraConverter(new BasicCassandraMappingContext());
-        CassandraAdminOperations cassandraAdminOperations = new CassandraAdminTemplate(localSession, converter);
 
-        CassandraMutagenImpl mutagen = new CassandraMutagenImpl(cassandraAdminOperations);
+        CassandraMutagenImpl mutagen = new CassandraMutagenImpl(cassandraOperations, config);
 		mutagen.initialize(rootResourcePath);
 
 		// Mutate!
 
-        Plan.Result<Integer> result = mutagen.mutate();
-        localSession.close();
-
-        return result;
+        return mutagen.mutate();
 	}
 
+    private State<Integer> testMutate(CassandraMutagenConfig config) throws Exception {
 
-	private void testInitialize() throws Exception {
+        Plan.Result<Integer> result = mutate(config);
 
-		Plan.Result<Integer> result = mutate();
+        // Check the results
+        State<Integer> state = result.getLastState();
 
-		// Check the results
-		State<Integer> state=result.getLastState();
+        System.out.println("Mutation complete: " + result.isMutationComplete());
+        System.out.println("Exception: " + result.getException());
+        if (result.getException() != null) {
+            result.getException().printStackTrace();
+        }
+        System.out.println("Completed mutations: " + result.getCompletedMutations());
+        System.out.println("Remaining mutations: " + result.getRemainingMutations());
+        System.out.println("Last state: " + (state != null ? state.getID() : "null"));
 
-		System.out.println("Mutation complete: "+result.isMutationComplete());
-		System.out.println("Exception: "+result.getException());
-		if (result.getException()!=null) {
-			result.getException().printStackTrace();
-		}
-		System.out.println("Completed mutations: "+result.getCompletedMutations());
-		System.out.println("Remining mutations: "+result.getRemainingMutations());
-		System.out.println("Last state: "+(state!=null ? state.getID() : "null"));
+        assertTrue(result.isMutationComplete());
+        assertNull(result.getException());
+        return state;
+    }
 
-		assertTrue(result.isMutationComplete());
-		assertNull(result.getException());
-		assertEquals((state!=null ? state.getID() : (Integer)(-1)),(Integer)4);
-	}
+	@Test
+	public void testForceMutate() throws Exception {
+        testMutate(new CassandraMutagenConfig());
 
+        cassandraOperations.execute(
+            QueryBuilder.insertInto("Test1")
+                        .value("key", "row2")
+                        .value("value1", "a1")
+                        .value("value2", "a2"));
 
-	/**
+        Select select = select().from("Test1");
+        select.where(eq("key", "row2"));
+        Row rowBefore = cassandraOperations.getSession().execute(select).one();
+
+        assertEquals("a1", rowBefore.getString("value1"));
+        assertEquals("a2", rowBefore.getString("value2"));
+
+        Select selectVersion = select().from(SchemaConstants.TABLE_SCHEMA_VERSION);
+        selectVersion.where(eq("key", "state"));
+        selectVersion.where(eq("column1", "version"));
+
+        Row rowVersionBefore = cassandraOperations.getSession().execute(selectVersion).one();
+        assertEquals(4, rowVersionBefore.getBytes("value").getInt());
+
+        State<Integer> state = testMutate(new CassandraMutagenConfig().forceMutation(3));
+        assertEquals(3, (int) state.getID());
+
+        Row rowAfter = cassandraOperations.getSession().execute(select).one();
+        assertEquals("chicken", rowAfter.getString("value1"));
+        assertEquals("sneeze", rowAfter.getString("value2"));
+
+        Row rowVersionAfter = cassandraOperations.getSession().execute(selectVersion).one();
+        assertEquals(4, rowVersionAfter.getBytes("value").getInt());
+
+    }
+
+    @Test
+    public void testForceVersion() throws Exception {
+        testMutate(new CassandraMutagenConfig());
+
+        cassandraOperations.execute(
+            QueryBuilder.insertInto("Test1")
+                        .value("key", "row2")
+                        .value("value1", "a1")
+                        .value("value2", "a2"));
+
+        Select select = select().from("Test1");
+        select.where(eq("key", "row2"));
+        Row rowBefore = cassandraOperations.getSession().execute(select).one();
+
+        assertEquals("a1", rowBefore.getString("value1"));
+        assertEquals("a2", rowBefore.getString("value2"));
+
+        Select selectVersion = select().from(SchemaConstants.TABLE_SCHEMA_VERSION);
+        selectVersion.where(eq("key", "state"));
+        selectVersion.where(eq("column1", "version"));
+
+        Row rowVersionBefore = cassandraOperations.getSession().execute(selectVersion).one();
+        assertEquals(4, rowVersionBefore.getBytes("value").getInt());
+
+        State<Integer> state = testMutate(new CassandraMutagenConfig().forceVersion(3));
+        assertEquals(3, (int) state.getID());
+
+        Row rowAfter = cassandraOperations.getSession().execute(select).one();
+        assertEquals("a1", rowAfter.getString("value1"));
+        assertEquals("a2", rowAfter.getString("value2"));
+
+        Row rowVersionAfter = cassandraOperations.getSession().execute(selectVersion).one();
+        assertEquals(3, rowVersionAfter.getBytes("value").getInt());
+
+    }
+
+    /**
 	 *
 	 *
 	 */
 	@Test
 	public void testData() throws Exception {
 
-        testInitialize();
-        Session localSession = cluster.connect("mutagen_test");
-        CassandraOperations cassandraOperations = new CassandraTemplate(localSession);
+        State<Integer> state = testMutate(new CassandraMutagenConfig());
+
+        assertEquals(4, state != null ? (int) state.getID() : -1);
 
         Select select = QueryBuilder.select().all().from("Test1");
         select.where(eq("key", "row1"));
@@ -130,6 +214,5 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
 		assertEquals("bar", row.getString("value1"));
 		assertEquals("baz", row.getString("value2"));
 
-        localSession.close();
 	}
 }
