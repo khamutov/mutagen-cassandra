@@ -8,6 +8,8 @@ import com.toddfast.mutagen.cassandra.CassandraCoordinator;
 import com.toddfast.mutagen.cassandra.CassandraMutagen;
 import com.toddfast.mutagen.cassandra.CassandraSubject;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.cassandra.core.CassandraAdminOperations;
@@ -28,6 +30,8 @@ import java.util.regex.Pattern;
  * @author Todd Fast
  */
 public class CassandraMutagenImpl implements CassandraMutagen {
+
+    private static final Logger log = LoggerFactory.getLogger(CassandraMutagenImpl.class);
 
 	private CassandraSubject subject;
 	private CassandraCoordinator coordinator;
@@ -72,7 +76,7 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 			resources=new ArrayList<>();
 
 			for (String resource: discoveredResources) {
-				System.out.println("Found mutation resource \""+resource+"\"");
+                log.info("Found mutation resource {}", resource);
 
 				if (resource.endsWith(".class")) {
 					// Remove the file path

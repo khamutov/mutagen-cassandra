@@ -16,6 +16,8 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cassandra.core.keyspace.DropTableSpecification;
 import org.springframework.data.cassandra.convert.CassandraConverter;
 import org.springframework.data.cassandra.convert.MappingCassandraConverter;
@@ -30,6 +32,8 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 import static org.junit.Assert.*;
 
 public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
+
+    private static final Logger log = LoggerFactory.getLogger(CassandraMutagenImplTest.class);
 
     private static Cluster cluster;
     private static CassandraAdminOperations cassandraOperations;
@@ -52,7 +56,7 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
     @AfterClass
 	public static void tearDownClass() {
         cluster.close();
-		System.out.println("Dropped keyspace mutagen_test");
+		log.info("Dropped keyspace mutagen_test");
 	}
 
     @Before
@@ -96,14 +100,14 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
         // Check the results
         State<Integer> state = result.getLastState();
 
-        System.out.println("Mutation complete: " + result.isMutationComplete());
-        System.out.println("Exception: " + result.getException());
+        log.info("Mutation complete: {}", result.isMutationComplete());
+        log.info("Exception: {}", result.getException());
         if (result.getException() != null) {
             result.getException().printStackTrace();
         }
-        System.out.println("Completed mutations: " + result.getCompletedMutations());
-        System.out.println("Remaining mutations: " + result.getRemainingMutations());
-        System.out.println("Last state: " + (state != null ? state.getID() : "null"));
+        log.info("Completed mutations: ", result.getCompletedMutations());
+        log.info("Remaining mutations: ", result.getRemainingMutations());
+        log.info("Last state: " + (state != null ? state.getID() : "null"));
 
         assertTrue(result.isMutationComplete());
         assertNull(result.getException());
