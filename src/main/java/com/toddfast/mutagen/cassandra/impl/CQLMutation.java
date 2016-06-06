@@ -1,12 +1,12 @@
 package com.toddfast.mutagen.cassandra.impl;
 
+import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.cassandra.AbstractCassandraMutation;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
 import org.apache.commons.io.IOUtils;
-import org.springframework.data.cassandra.core.CassandraOperations;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -25,8 +25,8 @@ public class CQLMutation extends AbstractCassandraMutation {
 	 *
 	 *
 	 */
-	public CQLMutation(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao, String resourceName) {
-		super(cassandraOperations, schemaVersionDao);
+	public CQLMutation(Session session, SchemaVersionDao schemaVersionDao, String resourceName) {
+		super(session, schemaVersionDao);
 		state = super.parseVersion(resourceName);
 		loadCQLStatements(resourceName);
 	}
@@ -50,6 +50,7 @@ public class CQLMutation extends AbstractCassandraMutation {
 
 		try {
 			source = loadResource(resourceName);
+			this.fileName = resourceName;
 		}
 		catch (IOException e) {
 			throw new MutagenException("Could not load resource \""+
@@ -160,7 +161,7 @@ public class CQLMutation extends AbstractCassandraMutation {
 			context.debug("Executing CQL \"{}\"",statement);
 
             try {
-                getCassandraOperations().execute(statement);
+                getSession().execute(statement);
             } catch (DriverException e) {
                 context.error("Exception executing CQL \"{}\"",statement,e);
                 throw new MutagenException("Exception executing CQL \""+
@@ -170,7 +171,8 @@ public class CQLMutation extends AbstractCassandraMutation {
 				throw e;
 			}
 
-            context.info("Successfully executed CQL \"{}\"", statement);
+            context.info("Successfully executed CQL mutation [{}]", fileName);
+            context.debug("Successfully executed CQL \"{}\"", statement);
 		}
 
 		context.debug("Done executing mutation {}",state.getID());
@@ -183,6 +185,7 @@ public class CQLMutation extends AbstractCassandraMutation {
 	// Fields
 	////////////////////////////////////////////////////////////////////////////
 
+	private String fileName;
 	private String source;
 	private State<Integer> state;
 	private List<String> statements = new ArrayList<>();

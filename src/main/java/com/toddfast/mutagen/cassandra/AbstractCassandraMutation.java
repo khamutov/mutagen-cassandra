@@ -1,5 +1,6 @@
 package com.toddfast.mutagen.cassandra;
 
+import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.Mutation;
@@ -7,7 +8,6 @@ import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.basic.SimpleState;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
 import com.toddfast.mutagen.cassandra.impl.CassandraMutagenConfig;
-import org.springframework.data.cassandra.core.CassandraOperations;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
@@ -22,14 +22,14 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 
 	private SchemaVersionDao schemaVersionDao;
 	private CassandraMutagenConfig config;
-	private CassandraOperations cassandraOperations;
+	private Session session;
 
     /**
 	 *
 	 *
 	 */
-	protected AbstractCassandraMutation(CassandraOperations cassandraOperations, SchemaVersionDao schemaVersionDao) {
-        this.cassandraOperations = cassandraOperations;
+	protected AbstractCassandraMutation(Session session, SchemaVersionDao schemaVersionDao) {
+        this.session = session;
 		this.schemaVersionDao = schemaVersionDao;
 		this.config = new CassandraMutagenConfig();
 	}
@@ -132,7 +132,9 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
             }
         }
 
-        if (config.getMode() == CassandraMutagenConfig.Mode.FORCE) {
+		if (config.getMode() == CassandraMutagenConfig.Mode.FORCE_RANGE) {
+			context.info("[Force range mode] Skipping version insertion [{}]", config.getMutation());
+		} else if (config.getMode() == CassandraMutagenConfig.Mode.FORCE) {
             context.info("[Force mode] Skipping version insertion [{}]", config.getMutation());
         } else {
             int version = getResultingState().getID();
@@ -216,7 +218,7 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
 		return hexString.toString();
 	}
 
-    public CassandraOperations getCassandraOperations() {
-        return cassandraOperations;
+    public Session getSession() {
+        return session;
     }
 }

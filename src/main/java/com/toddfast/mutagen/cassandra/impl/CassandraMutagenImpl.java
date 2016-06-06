@@ -1,5 +1,6 @@
 package com.toddfast.mutagen.cassandra.impl;
 
+import com.datastax.driver.core.Session;
 import com.toddfast.mutagen.Mutation;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.Planner;
@@ -10,11 +11,6 @@ import com.toddfast.mutagen.cassandra.CassandraSubject;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.data.cassandra.core.CassandraAdminOperations;
-import org.springframework.data.cassandra.core.CassandraOperations;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -22,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
@@ -36,19 +33,22 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 	private CassandraSubject subject;
 	private CassandraCoordinator coordinator;
     private SchemaVersionDao schemaVersionDao;
-    private CassandraOperations cassandraOperations;
+    private Session session;
     private CassandraMutagenConfig config;
 
-    public CassandraMutagenImpl(CassandraAdminOperations cassandraOperations, CassandraMutagenConfig config) {
-        this.cassandraOperations = cassandraOperations;
+    public CassandraMutagenImpl(Session session, CassandraMutagenConfig config) {
+		if (Objects.isNull(session.getLoggedKeyspace())) {
+			throw new IllegalArgumentException("Session must be started within keyspace.");
+		}
+        this.session = session;
         this.config = config.copy();
         this.coordinator = new CassandraCoordinator(this.config);
-        this.schemaVersionDao = new SchemaVersionDao(cassandraOperations);
-        this.subject = new CassandraSubject(cassandraOperations, schemaVersionDao);
+        this.schemaVersionDao = new SchemaVersionDao(session);
+        this.subject = new CassandraSubject(session, schemaVersionDao);
     }
 
-    public CassandraMutagenImpl(CassandraAdminOperations cassandraOperations) {
-        this(cassandraOperations, new CassandraMutagenConfig());
+    public CassandraMutagenImpl(Session session) {
+        this(session, new CassandraMutagenConfig());
     }
 
     /**
@@ -116,7 +116,7 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 		// Do this in a VM-wide critical section. External cluster-wide 
 		// synchronization is going to have to happen in the coordinator.
 		synchronized (System.class) {
-			List<Mutation<Integer>> mutations = CassandraPlanner.loadMutations(cassandraOperations, schemaVersionDao, config, getResources());
+			List<Mutation<Integer>> mutations = CassandraPlanner.loadMutations(session, schemaVersionDao, config, getResources());
 			Planner<Integer> planner=
 				new CassandraPlanner(mutations);
 			Plan<Integer> plan=planner.getPlan(subject,coordinator);
