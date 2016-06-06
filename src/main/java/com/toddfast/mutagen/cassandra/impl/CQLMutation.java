@@ -50,6 +50,7 @@ public class CQLMutation extends AbstractCassandraMutation {
 
 		try {
 			source = loadResource(resourceName);
+			this.fileName = resourceName;
 		}
 		catch (IOException e) {
 			throw new MutagenException("Could not load resource \""+
@@ -170,7 +171,8 @@ public class CQLMutation extends AbstractCassandraMutation {
 				throw e;
 			}
 
-            context.info("Successfully executed CQL \"{}\"", statement);
+            context.info("Successfully executed CQL mutation [{}]", fileName);
+            context.debug("Successfully executed CQL \"{}\"", statement);
 		}
 
 		context.debug("Done executing mutation {}",state.getID());
@@ -183,6 +185,7 @@ public class CQLMutation extends AbstractCassandraMutation {
 	// Fields
 	////////////////////////////////////////////////////////////////////////////
 
+	private String fileName;
 	private String source;
 	private State<Integer> state;
 	private List<String> statements = new ArrayList<>();

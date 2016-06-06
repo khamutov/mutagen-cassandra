@@ -8,9 +8,12 @@ import com.datastax.driver.core.querybuilder.Select;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.cassandra.table.SchemaConstants;
+import org.apache.cassandra.exceptions.ConfigurationException;
+import org.apache.thrift.transport.TTransportException;
 import org.cassandraunit.AbstractCassandraUnit4TestCase;
 import org.cassandraunit.dataset.DataSet;
 import org.cassandraunit.dataset.yaml.ClassPathYamlDataSet;
+import org.cassandraunit.utils.EmbeddedCassandraServerHelper;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -43,10 +46,10 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
     }
 
     @BeforeClass
-    public static void setUpOnce() {
-        cluster = Cluster.builder().addContactPoint("192.168.99.100").withPort(9042).build();
-        cluster.connect().execute("DROP KEYSPACE IF EXISTS " + KEYSPACE);
-        cluster.connect().execute("CREATE KEYSPACE IF NOT EXISTS " + KEYSPACE + " WITH REPLICATION = {'class' : 'SimpleStrategy', 'replication_factor' : 1};");
+    public static void setUpOnce() throws InterruptedException, TTransportException, ConfigurationException, IOException {
+        EmbeddedCassandraServerHelper.startEmbeddedCassandra();
+        cluster = Cluster.builder().addContactPoint("127.0.0.1").withPort(9142).build();
+        EmbeddedCassandraServerHelper.cleanEmbeddedCassandra();
     }
 
     @AfterClass
@@ -62,9 +65,8 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
 
     @After
     public void tearDown() throws Exception {
-        session.execute("DROP TABLE IF EXISTS Test1");
-        session.execute("DROP TABLE IF EXISTS " + SchemaConstants.TABLE_SCHEMA_VERSION);
         session.close();
+        EmbeddedCassandraServerHelper.cleanEmbeddedCassandra();
     }
 
     /**
