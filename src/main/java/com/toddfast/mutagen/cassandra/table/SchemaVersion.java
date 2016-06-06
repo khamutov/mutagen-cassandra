@@ -1,18 +1,19 @@
 package com.toddfast.mutagen.cassandra.table;
 
-import org.springframework.cassandra.core.PrimaryKeyType;
-import org.springframework.data.cassandra.mapping.PrimaryKeyColumn;
-import org.springframework.data.cassandra.mapping.Table;
+
+import com.datastax.driver.mapping.annotations.ClusteringColumn;
+import com.datastax.driver.mapping.annotations.PartitionKey;
+import com.datastax.driver.mapping.annotations.Table;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 
-@Table(SchemaConstants.TABLE_SCHEMA_VERSION)
+@Table(name = SchemaConstants.TABLE_SCHEMA_VERSION)
 public class SchemaVersion implements Serializable {
 
-    @PrimaryKeyColumn(name = "key", ordinal = 0, type = PrimaryKeyType.PARTITIONED)
+    @PartitionKey
     private String key;
-    @PrimaryKeyColumn(name = "column1", ordinal = 1, type = PrimaryKeyType.CLUSTERED)
+    @ClusteringColumn
     private String column1;
     private ByteBuffer value;
 
