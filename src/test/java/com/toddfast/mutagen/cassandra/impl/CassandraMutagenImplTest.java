@@ -1,93 +1,22 @@
 package com.toddfast.mutagen.cassandra.impl;
 
-import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.cassandra.table.SchemaConstants;
-import org.apache.cassandra.exceptions.ConfigurationException;
-import org.apache.thrift.transport.TTransportException;
-import org.cassandraunit.AbstractCassandraUnit4TestCase;
-import org.cassandraunit.dataset.DataSet;
-import org.cassandraunit.dataset.yaml.ClassPathYamlDataSet;
-import org.cassandraunit.utils.EmbeddedCassandraServerHelper;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
-public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
-
-    private static final Logger log = LoggerFactory.getLogger(CassandraMutagenImplTest.class);
-
-    private static final String KEYSPACE = "mutagen_test";
-
-    private static Cluster cluster;
-    private static Session session;
-
-    public CassandraMutagenImplTest() {
-	}
-
-    @Override
-    public DataSet getDataSet() {
-        return new ClassPathYamlDataSet("keyspaceDataSet.yml");
-    }
-
-    @BeforeClass
-    public static void setUpOnce() throws InterruptedException, TTransportException, ConfigurationException, IOException {
-        EmbeddedCassandraServerHelper.startEmbeddedCassandra();
-        cluster = Cluster.builder().addContactPoint("127.0.0.1").withPort(9142).build();
-        EmbeddedCassandraServerHelper.cleanEmbeddedCassandra();
-    }
-
-    @AfterClass
-	public static void tearDownClass() {
-        cluster.close();
-		log.info("Dropped keyspace " + KEYSPACE);
-	}
-
-    @Before
-    public void setUp() throws Exception {
-        session = cluster.connect(KEYSPACE);
-    }
-
-    @After
-    public void tearDown() throws Exception {
-        session.close();
-        EmbeddedCassandraServerHelper.cleanEmbeddedCassandra();
-    }
-
-    /**
-	 * This is it!
-	 *
-     * @param config
-     */
-	private Plan.Result<Integer> mutate(CassandraMutagenConfig config)
-			throws IOException {
-
-		// Initialize the list of mutations
-		String rootResourcePath="com/toddfast/mutagen/cassandra/test/mutations";
-
-
-        CassandraMutagenImpl mutagen = new CassandraMutagenImpl(session, config);
-		mutagen.initialize(rootResourcePath);
-
-		// Mutate!
-
-        return mutagen.mutate();
-	}
+public class CassandraMutagenImplTest extends MutagenBaseTest {
 
     private State<Integer> testMutate(CassandraMutagenConfig config) throws Exception {
         Plan.Result<Integer> result = mutate(config);
@@ -109,9 +38,9 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
         return state;
     }
 
-	@Test
-	public void testForceMutate() throws Exception {
-        testMutate(new CassandraMutagenConfig());
+    @Test
+    public void testForceMutate() throws Exception {
+        testMutate(config());
 
         session.execute(
             QueryBuilder.insertInto("Test1")
@@ -133,7 +62,7 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
         Row rowVersionBefore = session.execute(selectVersion).one();
         assertEquals(5, rowVersionBefore.getBytes("value").getInt());
 
-        State<Integer> state = testMutate(new CassandraMutagenConfig().forceMutation(3));
+        State<Integer> state = testMutate(config().forceMutation(3));
         assertEquals(3, (int) state.getID());
 
         Row rowAfter = session.execute(select).one();
@@ -147,7 +76,7 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
 
     @Test
     public void testForceRangeMutate() throws Exception {
-        testMutate(new CassandraMutagenConfig());
+        testMutate(config());
 
         Select selectVersion = select().from(SchemaConstants.TABLE_SCHEMA_VERSION);
         selectVersion.where(eq("key", "state"));
@@ -156,13 +85,13 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
         Row rowVersionBefore = session.execute(selectVersion).one();
         assertEquals(5, rowVersionBefore.getBytes("value").getInt());
 
-        State<Integer> state = testMutate(new CassandraMutagenConfig().forceRangeMutation(3, 4));
+        State<Integer> state = testMutate(config().forceRangeMutation(3, 4));
         assertEquals(4, (int) state.getID());
     }
 
     @Test
     public void testForceVersion() throws Exception {
-        testMutate(new CassandraMutagenConfig());
+        testMutate(config());
 
         session.execute(
             QueryBuilder.insertInto("Test1")
@@ -184,7 +113,7 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
         Row rowVersionBefore = session.execute(selectVersion).one();
         assertEquals(5, rowVersionBefore.getBytes("value").getInt());
 
-        State<Integer> state = testMutate(new CassandraMutagenConfig().forceVersion(3));
+        State<Integer> state = testMutate(config().forceVersion(3));
         assertEquals(3, (int) state.getID());
 
         Row rowAfter = session.execute(select).one();
@@ -197,13 +126,13 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
     }
 
     /**
-	 *
-	 *
-	 */
-	@Test
-	public void testData() throws Exception {
+     *
+     *
+     */
+    @Test
+    public void testData() throws Exception {
 
-        State<Integer> state = testMutate(new CassandraMutagenConfig());
+        State<Integer> state = testMutate(config());
 
         assertEquals(5, state != null ? (int) state.getID() : -1);
 
@@ -211,22 +140,27 @@ public class CassandraMutagenImplTest extends AbstractCassandraUnit4TestCase {
         select.where(eq("key", "row1"));
         Row row = session.execute(select).one();
 
-		assertEquals("foo", row.getString("value1"));
-		assertEquals("bar", row.getString("value2"));
+        assertEquals("foo", row.getString("value1"));
+        assertEquals("bar", row.getString("value2"));
 
         select = QueryBuilder.select().all().from("Test1");
         select.where(eq("key", "row2"));
         row = session.execute(select).one();
 
-		assertEquals("chicken", row.getString("value1"));
-		assertEquals("sneeze", row.getString("value2"));
+        assertEquals("chicken", row.getString("value1"));
+        assertEquals("sneeze", row.getString("value2"));
 
         select = QueryBuilder.select().all().from("Test1");
         select.where(eq("key", "row3"));
         row = session.execute(select).one();
 
-		assertEquals("bar", row.getString("value1"));
-		assertEquals("baz", row.getString("value2"));
+        assertEquals("bar", row.getString("value1"));
+        assertEquals("baz", row.getString("value2"));
 
-	}
+    }
+
+    @Override
+    public CassandraMutagenConfig config() {
+        return new CassandraMutagenConfig().skipTestPremutations();
+    }
 }

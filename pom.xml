@@ -2,8 +2,8 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.toddfast.mutagen</groupId>
-	<artifactId>spring-mutagen-cassandra</artifactId>
-	<version>0.4.6-SNAPSHOT</version>
+	<artifactId>mutagen-cassandra-tobox</artifactId>
+	<version>0.4.7-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>toddfast-mutagen-cassandra</name>

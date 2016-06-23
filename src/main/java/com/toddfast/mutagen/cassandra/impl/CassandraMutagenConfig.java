@@ -10,12 +10,14 @@ public class CassandraMutagenConfig {
 
     private Integer start;
     private Integer end;
+    private boolean skipPremutations;
 
-    public CassandraMutagenConfig(Integer mutation, Mode mode, Integer start, Integer end) {
+    public CassandraMutagenConfig(Integer mutation, Mode mode, Integer start, Integer end, boolean skipPremutations) {
         this.mutation = mutation;
         this.mode = mode;
         this.start = start;
         this.end = end;
+        this.skipPremutations = skipPremutations;
     }
 
     public CassandraMutagenConfig() {
@@ -29,6 +31,11 @@ public class CassandraMutagenConfig {
     public CassandraMutagenConfig forceMutation(int mutation) {
         this.mode = Mode.FORCE;
         this.mutation = mutation;
+        return this;
+    }
+
+    public CassandraMutagenConfig skipTestPremutations() {
+        this.skipPremutations = true;
         return this;
     }
 
@@ -48,6 +55,10 @@ public class CassandraMutagenConfig {
         return this;
     }
 
+    public boolean skipPremutations() {
+        return skipPremutations;
+    }
+
     public Integer getMutation() {
         return mutation;
     }
@@ -65,7 +76,7 @@ public class CassandraMutagenConfig {
     }
 
     public CassandraMutagenConfig copy() {
-        return new CassandraMutagenConfig(mutation, mode, start, end);
+        return new CassandraMutagenConfig(mutation, mode, start, end, skipPremutations);
     }
 
     public enum Mode {
