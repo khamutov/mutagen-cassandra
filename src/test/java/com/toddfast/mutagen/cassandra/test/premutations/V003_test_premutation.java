@@ -6,7 +6,7 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.toddfast.mutagen.cassandra.premutation.CheckStateException;
 import com.toddfast.mutagen.cassandra.premutation.Premutation;
 import com.toddfast.mutagen.cassandra.premutation.Scheme;
-import com.toddfast.mutagen.cassandra.premutation.Table;
+import com.toddfast.mutagen.cassandra.premutation.Record;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
@@ -18,10 +18,10 @@ public class V003_test_premutation extends Premutation {
 
     @Override
     public Scheme formScheme() {
-        return Scheme.instance().addTable(
-            Table.instance("Test1")
-                 .value("key", "test")
-                 .value("value1", "val1"));
+        return Scheme.instance().addRecord(
+            Record.into("Test1")
+                  .value("key", "test")
+                  .value("value1", "val1"));
         //value2 is intentionally omitted
 
     }

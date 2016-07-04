@@ -71,7 +71,7 @@ public class CassandraPlan implements Plan<Integer> {
             final Mutation<Integer> mutation = i.next();
             int mutationNumber = mutation.getResultingState().getID();
             try {
-                if (!config.skipPremutations() && premutationMap.containsKey(mutationNumber)) {
+                if (config.premutationsEnabled() && premutationMap.containsKey(mutationNumber)) {
                     PremutationProcessor processor = new PremutationProcessor(session, premutationMap.get(mutationNumber));
                     processor.execute();
                     mutation.mutate(context);

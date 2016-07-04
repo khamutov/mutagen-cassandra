@@ -7,7 +7,7 @@ import java.util.Set;
 
 public class Scheme {
     private String keyspace;
-    private Set<Table> tables = new HashSet<>();
+    private Set<Record> records = new HashSet<>();
 
     private Scheme() {
     }
@@ -16,17 +16,26 @@ public class Scheme {
         this.keyspace = keyspace;
     }
 
+    private Scheme(String keyspace, Collection<Record> records) {
+        this(keyspace);
+        this.records = new HashSet<>(records);
+    }
+
+    private Scheme(Collection<Record> records) {
+        this.records = new HashSet<>(records);
+    }
+
     public void setKeyspace(String keyspace) {
         this.keyspace = keyspace;
     }
 
-    public Scheme addTable(Table table) {
-        tables.add(table);
+    public Scheme addRecord(Record record) {
+        records.add(record);
         return this;
     }
 
-    public Scheme addTables(Collection<Table> table) {
-        tables.addAll(table);
+    public Scheme addRecords(Collection<Record> record) {
+        records.addAll(record);
         return this;
     }
 
@@ -38,12 +47,20 @@ public class Scheme {
         return new Scheme(keyspace);
     }
 
-    public Scheme addTables(Table... tables) {
-        return addTables(Arrays.asList(tables));
+    public static Scheme instance(Collection<Record> records) {
+        return new Scheme(records);
     }
 
-    public Set<Table> getTables() {
-        return tables;
+    public static Scheme instance(String keyspace, Collection<Record> records) {
+        return new Scheme(keyspace, records);
+    }
+
+    public Scheme addRecords(Record... records) {
+        return addRecords(Arrays.asList(records));
+    }
+
+    public Set<Record> getRecords() {
+        return records;
     }
 
     public String getKeyspace() {

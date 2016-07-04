@@ -32,6 +32,6 @@ public class PremutationTest extends MutagenBaseTest {
 
     @Override
     public CassandraMutagenConfig config() {
-        return new CassandraMutagenConfig();
+        return new CassandraMutagenConfig().enablePremutations();
     }
 }

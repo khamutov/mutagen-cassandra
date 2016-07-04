@@ -8,8 +8,6 @@ import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.cassandra.table.SchemaConstants;
 import org.junit.Test;
 
-import java.io.IOException;
-
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 import static org.junit.Assert.assertEquals;
@@ -161,6 +159,6 @@ public class CassandraMutagenImplTest extends MutagenBaseTest {
 
     @Override
     public CassandraMutagenConfig config() {
-        return new CassandraMutagenConfig().skipTestPremutations();
+        return new CassandraMutagenConfig();
     }
 }

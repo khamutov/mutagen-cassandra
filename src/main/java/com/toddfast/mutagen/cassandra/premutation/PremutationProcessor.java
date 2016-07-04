@@ -26,9 +26,9 @@ public class PremutationProcessor {
         log.info("Initializing scheme for [{}] mutation", premutation.getMutationNumber());
         Scheme scheme = premutation.formScheme();
         Optional<String> keyspace = Optional.ofNullable(scheme.getKeyspace());
-        for (Table table : scheme.getTables()) {
-            Insert insert = QueryBuilder.insertInto(keyspace.orElse(session.getLoggedKeyspace()), table.getTableName());
-            for (Map.Entry<String, Object> entry : table.getFields().entrySet()) {
+        for (Record record : scheme.getRecords()) {
+            Insert insert = QueryBuilder.insertInto(keyspace.orElse(session.getLoggedKeyspace()), record.getTableName());
+            for (Map.Entry<String, Object> entry : record.getFields().entrySet()) {
                 insert.value(entry.getKey(), entry.getValue());
             }
             session.execute(insert);
@@ -39,8 +39,8 @@ public class PremutationProcessor {
         log.info("Cleaning scheme after [{}] mutation", premutation.getMutationNumber());
         Scheme scheme = premutation.formScheme();
         Optional<String> keyspace = Optional.ofNullable(scheme.getKeyspace());
-        for (Table table : scheme.getTables()) {
-            session.execute(QueryBuilder.truncate(keyspace.orElse(session.getLoggedKeyspace()), table.getTableName()));
+        for (Record record : scheme.getRecords()) {
+            session.execute(QueryBuilder.truncate(keyspace.orElse(session.getLoggedKeyspace()), record.getTableName()));
         }
     }
 

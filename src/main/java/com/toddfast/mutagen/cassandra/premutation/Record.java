@@ -3,15 +3,15 @@ package com.toddfast.mutagen.cassandra.premutation;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Table {
+public class Record {
     private String table;
     private Map<String, Object> fields = new HashMap<>();
 
-    private Table(String table) {
+    private Record(String table) {
         this.table = table;
     }
 
-    public Table value(String field, Object value) {
+    public Record value(String field, Object value) {
         fields.put(field, value);
         return this;
     }
@@ -24,11 +24,7 @@ public class Table {
         return fields;
     }
 
-    public void setTable(String table) {
-        this.table = table;
-    }
-
-    public static Table instance(String tableName) {
-        return new Table(tableName);
+    public static Record into(String tableName) {
+        return new Record(tableName);
     }
 }
