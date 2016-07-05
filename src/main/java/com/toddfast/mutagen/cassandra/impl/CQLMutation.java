@@ -171,7 +171,7 @@ public class CQLMutation extends AbstractCassandraMutation {
 				throw e;
 			}
 
-            context.info("Successfully executed CQL mutation [{}]", fileName);
+            context.info("Successfully executed CQL statement from mutation [{}]", fileName);
             context.debug("Successfully executed CQL \"{}\"", statement);
 		}
 
