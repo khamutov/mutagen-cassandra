@@ -3,6 +3,7 @@ package com.toddfast.mutagen.cassandra.test.premutations;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.toddfast.mutagen.cassandra.impl.SessionHolder;
 import com.toddfast.mutagen.cassandra.premutation.CheckStateException;
 import com.toddfast.mutagen.cassandra.premutation.Premutation;
 import com.toddfast.mutagen.cassandra.premutation.Scheme;
@@ -12,8 +13,8 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 public class V003_test_premutation extends Premutation {
 
-    public V003_test_premutation(Session session) {
-        super(session);
+    public V003_test_premutation(SessionHolder sessionHolder) {
+        super(sessionHolder);
     }
 
     @Override

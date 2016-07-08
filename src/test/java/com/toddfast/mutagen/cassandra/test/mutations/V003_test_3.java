@@ -7,14 +7,18 @@ import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.basic.SimpleState;
 import com.toddfast.mutagen.cassandra.AbstractCassandraMutation;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
+import com.toddfast.mutagen.cassandra.impl.SessionHolder;
+import org.apache.commons.io.IOUtils;
+
+import java.io.IOException;
 
 /**
  * @author Todd Fast
  */
-public class V003 extends AbstractCassandraMutation {
+public class V003_test_3 extends AbstractCassandraMutation {
 
-    public V003(Session session, SchemaVersionDao schemaVersionDao) {
-        super(session, schemaVersionDao);
+    public V003_test_3(SessionHolder sessionHolder, SchemaVersionDao schemaVersionDao) {
+        super(sessionHolder, schemaVersionDao);
         state = new SimpleState<>(3);
     }
 
@@ -23,14 +27,13 @@ public class V003 extends AbstractCassandraMutation {
         return state;
     }
 
-
-    /**
-     * Return a canonical representative of the change in string form
-     */
     @Override
-    protected String getChangeSummary() {
-        return "update 'Test1' set value1='chicken', value2='sneeze' " +
-            "where key='row2';";
+    public byte[] getFootprint() {
+        try {
+            return IOUtils.toByteArray(this.getClass().getResourceAsStream(this.getClass().getSimpleName() + ".java"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

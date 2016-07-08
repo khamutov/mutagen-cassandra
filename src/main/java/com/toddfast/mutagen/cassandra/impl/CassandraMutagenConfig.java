@@ -1,5 +1,9 @@
 package com.toddfast.mutagen.cassandra.impl;
 
+import com.datastax.driver.core.Session;
+
+import java.util.function.UnaryOperator;
+
 /**
  * @author alexander.polischuk@tobox.com
  * @since 15/01/16.
@@ -11,13 +15,16 @@ public class CassandraMutagenConfig {
     private Integer start;
     private Integer end;
     private boolean enablePremutations;
+    private UnaryOperator<Session> action;
 
-    public CassandraMutagenConfig(Integer mutation, Mode mode, Integer start, Integer end, boolean enablePremutations) {
+    public CassandraMutagenConfig(Integer mutation, Mode mode, Integer start,
+                                  Integer end, boolean enablePremutations, UnaryOperator<Session> action) {
         this.mutation = mutation;
         this.mode = mode;
         this.start = start;
         this.end = end;
         this.enablePremutations = enablePremutations;
+        this.action = action;
     }
 
     public CassandraMutagenConfig() {
@@ -34,13 +41,18 @@ public class CassandraMutagenConfig {
         return this;
     }
 
+    public CassandraMutagenConfig withActionIfMutationChanged(UnaryOperator<Session> action) {
+        this.action = action;
+        return this;
+    }
+
     public CassandraMutagenConfig enablePremutations() {
         this.enablePremutations = true;
         return this;
     }
 
     public CassandraMutagenConfig forceRangeMutation(int start, int end) {
-        if(start >= end) {
+        if (start >= end) {
             throw new IllegalArgumentException("Start should be less than end! (start < end)");
         }
         this.mode = Mode.FORCE_RANGE;
@@ -75,8 +87,12 @@ public class CassandraMutagenConfig {
         return end;
     }
 
+    public UnaryOperator<Session> getChangedMutationAction() {
+        return action;
+    }
+
     public CassandraMutagenConfig copy() {
-        return new CassandraMutagenConfig(mutation, mode, start, end, enablePremutations);
+        return new CassandraMutagenConfig(mutation, mode, start, end, enablePremutations, action);
     }
 
     public enum Mode {

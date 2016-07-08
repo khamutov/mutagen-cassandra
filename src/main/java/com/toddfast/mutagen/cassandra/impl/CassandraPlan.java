@@ -1,6 +1,5 @@
 package com.toddfast.mutagen.cassandra.impl;
 
-import com.datastax.driver.core.Session;
 import com.toddfast.mutagen.Coordinator;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.Mutation;
@@ -9,6 +8,8 @@ import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.Subject;
 import com.toddfast.mutagen.cassandra.premutation.Premutation;
 import com.toddfast.mutagen.cassandra.premutation.PremutationProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -17,21 +18,23 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class CassandraPlan implements Plan<Integer> {
+    private final static Logger log = LoggerFactory.getLogger(CassandraPlan.class);
+
     private Subject<Integer> subject;
     private Coordinator<Integer> coordinator;
     private List<Mutation<Integer>> mutations;
     private List<Premutation> premutations;
-    private Session session;
+    private SessionHolder sessionHolder;
     private CassandraMutagenConfig config;
 
     public CassandraPlan(Subject<Integer> subject, Coordinator<Integer> coordinator,
                          List<Mutation<Integer>> mutations, List<Premutation> premutations,
-                         Session session, CassandraMutagenConfig config) {
+                         SessionHolder sessionHolder, CassandraMutagenConfig config) {
         this.subject = subject;
         this.coordinator = coordinator;
         this.mutations = mutations;
         this.premutations = premutations;
-        this.session = session;
+        this.sessionHolder = sessionHolder;
         this.config = config;
     }
 
@@ -72,7 +75,7 @@ public class CassandraPlan implements Plan<Integer> {
             int mutationNumber = mutation.getResultingState().getID();
             try {
                 if (config.premutationsEnabled() && premutationMap.containsKey(mutationNumber)) {
-                    PremutationProcessor processor = new PremutationProcessor(session, premutationMap.get(mutationNumber));
+                    PremutationProcessor processor = new PremutationProcessor(sessionHolder, premutationMap.get(mutationNumber));
                     processor.execute();
                     mutation.mutate(context);
                     processor.check();
@@ -86,6 +89,7 @@ public class CassandraPlan implements Plan<Integer> {
                 // Add to the completed list, remove from remaining list
                 completedMutations.add(mutation);
                 i.remove();
+                log.info("Successfully executed mutation [{}]", mutationNumber);
             } catch (RuntimeException e) {
                 exception = new MutagenException("Exception executing " +
                                                      "mutation for state \"" + mutation.getResultingState() +

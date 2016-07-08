@@ -15,13 +15,5 @@ public interface CassandraMutagen {
 	 *
 	 *
 	 */
-	void initialize(String rootResourcePath, String testResourcePath)
-		throws IOException;
-
-
-	/**
-	 *
-	 *
-	 */
 	Plan.Result<Integer> mutate();
 }
