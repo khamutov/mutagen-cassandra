@@ -1,14 +1,15 @@
 package com.toddfast.mutagen.cassandra.premutation;
 
 import com.datastax.driver.core.Session;
+import com.toddfast.mutagen.cassandra.impl.SessionHolder;
 
 public abstract class Premutation {
 
     private int mutationNumber;
-    private Session session;
+    private SessionHolder sessionHolder;
 
-    public Premutation(Session session) {
-        this.session = session;
+    public Premutation(SessionHolder sessionHolder) {
+        this.sessionHolder = sessionHolder;
     }
 
     protected void setMutationNumber(int mutationNumber) {
@@ -37,6 +38,6 @@ public abstract class Premutation {
     public abstract void check() throws CheckStateException;
 
     public Session getSession() {
-        return session;
+        return sessionHolder.get();
     }
 }

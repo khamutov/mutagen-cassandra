@@ -1,6 +1,5 @@
 package com.toddfast.mutagen.cassandra.impl;
 
-import com.datastax.driver.core.Session;
 import com.toddfast.mutagen.Coordinator;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.Mutation;
@@ -25,18 +24,18 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 
     private List<Premutation> premutations;
     private List<Mutation<Integer>> mutations;
-    private Session session;
+    private SessionHolder sessionHolder;
     private CassandraMutagenConfig config;
 
     /**
      *
      *
      */
-    protected CassandraPlanner(List<Mutation<Integer>> mutations, List<Premutation> premutations, Session session, CassandraMutagenConfig config) {
+    protected CassandraPlanner(List<Mutation<Integer>> mutations, List<Premutation> premutations, SessionHolder sessionHolder, CassandraMutagenConfig config) {
         super(mutations, null);
         this.mutations = mutations;
         this.premutations = premutations;
-        this.session = session;
+        this.sessionHolder = sessionHolder;
         this.config = config;
     }
 
@@ -45,7 +44,7 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
      *
      *
      */
-    public static List<Mutation<Integer>> loadMutations(Session session, SchemaVersionDao schemaVersionDao, CassandraMutagenConfig config, Collection<String> resources) {
+    public static List<Mutation<Integer>> loadMutations(SessionHolder session, SchemaVersionDao schemaVersionDao, CassandraMutagenConfig config, Collection<String> resources) {
 
         List<Mutation<Integer>> result = new ArrayList<>();
 
@@ -59,21 +58,13 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
                 result.add(mutation);
             } else if (resource.endsWith(".class")) {
                 result.add(loadMutationClass(session, schemaVersionDao, config, resource));
-            } else {
-                throw new IllegalArgumentException("Unknown type for " +
-                                                       "mutation resource \"" + resource + "\"");
             }
         }
 
         return result;
     }
 
-
-    /**
-     *
-     *
-     */
-    private static Mutation<Integer> loadMutationClass(Session session, SchemaVersionDao schemaVersionDao, CassandraMutagenConfig config, String resource) {
+    private static Mutation<Integer> loadMutationClass(SessionHolder sessionHolder, SchemaVersionDao schemaVersionDao, CassandraMutagenConfig config, String resource) {
 
         assert resource.endsWith(".class") :
             "Class resource name \"" + resource + "\" should end with .class";
@@ -101,8 +92,8 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
 
             try {
                 // Try a constructor taking a keyspace
-                constructor = clazz.getConstructor(Session.class, SchemaVersionDao.class);
-                mutation = (AbstractCassandraMutation) constructor.newInstance(session, schemaVersionDao);
+                constructor = clazz.getConstructor(SessionHolder.class, SchemaVersionDao.class);
+                mutation = (AbstractCassandraMutation) constructor.newInstance(sessionHolder, schemaVersionDao);
             } catch (NoSuchMethodException e) {
                 // Wrong assumption
             }
@@ -165,6 +156,6 @@ public class CassandraPlanner extends BasicPlanner<Integer> {
             }
         }
         return new CassandraPlan(subject, coordinator, subjectMutations,
-                                 premutations, session, config);
+                                 premutations, sessionHolder, config);
     }
 }

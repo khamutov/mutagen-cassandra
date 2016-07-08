@@ -1,123 +1,155 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-	<groupId>com.toddfast.mutagen</groupId>
-	<artifactId>mutagen-cassandra-tobox</artifactId>
-	<version>0.4.7-SNAPSHOT</version>
-	<packaging>jar</packaging>
+    <groupId>com.toddfast.mutagen</groupId>
+    <artifactId>mutagen-cassandra-tobox</artifactId>
+    <version>0.4.8-SNAPSHOT</version>
+    <packaging>jar</packaging>
 
-	<name>toddfast-mutagen-cassandra</name>
+    <name>toddfast-mutagen-cassandra-tobox</name>
 
-	<description>Mutagen Cassandra is a framework (based on Mutagen) that
-		provides CQL schema versioning and mutation for Apache Cassandra.
-	</description>
+    <description>Mutagen Cassandra is a framework (based on Mutagen) that
+        provides CQL schema versioning and mutation for Apache Cassandra.
+    </description>
 
-	<url>https://github.com/toddfast/mutagen-cassandra</url>
-	<scm>
-		<url>https://github.com/toddfast/mutagen-cassandra</url>
-		<connection>scm:git:git@github.com:toddfast/mutagen-cassandra.git</connection>
-		<developerConnection>scm:git:git@github.com:toddfast/mutagen-cassandra.git</developerConnection>
-	</scm>
+    <url>https://github.com/toddfast/mutagen-cassandra</url>
+    <scm>
+        <url>https://github.com/toddfast/mutagen-cassandra</url>
+        <connection>scm:git:git@github.com:toddfast/mutagen-cassandra.git</connection>
+        <developerConnection>scm:git:git@github.com:toddfast/mutagen-cassandra.git</developerConnection>
+    </scm>
 
-	<licenses>
-		<license>
-			<name>The Apache Software License, Version 2.0</name>
-			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-			<distribution>repo</distribution>
-		</license>
-	</licenses>
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
-	<developers>
-		<developer>
-			<id>toddfast</id>
-			<name>Todd Fast</name>
-			<email>todd@toddfast.com</email>
-		</developer>
+    <developers>
+        <developer>
+            <id>toddfast</id>
+            <name>Todd Fast</name>
+            <email>todd@toddfast.com</email>
+        </developer>
         <developer>
             <id>khamutov</id>
             <name>Aleksandr Khamutov</name>
         </developer>
-	</developers>
+        <developer>
+            <id>aososkov</id>
+            <name>Andrey Ososkov</name>
+        </developer>
+    </developers>
 
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<java.version>1.8</java.version>
-	</properties>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>1.8</java.version>
+    </properties>
 
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.3</version>
-				<configuration>
-					<source>${java.version}</source>
-					<target>${java.version}</target>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-resources-plugin</artifactId>
-				<version>2.7</version>
-				<configuration>
-					<encoding>UTF-8</encoding>
-				</configuration>
-			</plugin>
-		</plugins>
-		<defaultGoal>clean package</defaultGoal>
-	</build>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.7</version>
+                <executions>
+                    <execution>
+                        <id>copy-resources-test</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/target/test-classes/com/toddfast/mutagen/cassandra/test/mutations</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/test/java/com/toddfast/mutagen/cassandra/test/mutations</directory>
+                                    <filtering>true</filtering>
+                                    <includes>
+                                        <include>**/*.java</include>
+                                        <include>**/*.cql</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.3</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.7</version>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+        </plugins>
+        <defaultGoal>clean package</defaultGoal>
+    </build>
 
-	<dependencies>
+    <dependencies>
 
-		<dependency>
-			<groupId>com.toddfast.mutagen</groupId>
-			<artifactId>mutagen</artifactId>
-			<version>0.3.0</version>
-		</dependency>
+        <dependency>
+            <groupId>com.toddfast.mutagen</groupId>
+            <artifactId>mutagen</artifactId>
+            <version>0.3.0</version>
+        </dependency>
 
         <dependency>
             <groupId>com.datastax.cassandra</groupId>
             <artifactId>cassandra-driver-core</artifactId>
             <version>3.0.0</version>
         </dependency>
-		<dependency>
-			<groupId>com.datastax.cassandra</groupId>
-			<artifactId>cassandra-driver-mapping</artifactId>
-			<version>3.0.0</version>
-		</dependency>
+        <dependency>
+            <groupId>com.datastax.cassandra</groupId>
+            <artifactId>cassandra-driver-mapping</artifactId>
+            <version>3.0.0</version>
+        </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>18.0</version>
         </dependency>
 
-		<dependency>
-			<groupId>commons-io</groupId>
-			<artifactId>commons-io</artifactId>
-			<version>2.4</version>
-		</dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.4</version>
+        </dependency>
 
-		<!-- http://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-			<version>1.7.21</version>
-		</dependency>
+        <!-- http://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.21</version>
+        </dependency>
 
 
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.10</version>
-			<scope>test</scope>
-		</dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
+            <scope>test</scope>
+        </dependency>
 
-		<dependency>
-			<groupId>org.cassandraunit</groupId>
-			<artifactId>cassandra-unit</artifactId>
-			<version>2.1.3.1</version>
-			<scope>test</scope>
-		</dependency>
+        <dependency>
+            <groupId>org.cassandraunit</groupId>
+            <artifactId>cassandra-unit</artifactId>
+            <version>2.1.3.1</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 </project>

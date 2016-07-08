@@ -14,6 +14,7 @@ public class MutationResult<I extends Comparable<I>> implements Plan.Result<I> {
     private List<Mutation<I>> remainingMutations;
     private State<I> lastState;
     private MutagenException exception;
+    private boolean skipped;
 
 
     public MutationResult(Plan<I> plan, List<Mutation<I>> completedMutations,
@@ -25,6 +26,10 @@ public class MutationResult<I extends Comparable<I>> implements Plan.Result<I> {
         this.exception = exception;
     }
 
+    public MutationResult(boolean skipped) {
+        this.skipped = skipped;
+    }
+
     @Override
     public Plan<I> getPlan() {
         return plan;
@@ -32,7 +37,7 @@ public class MutationResult<I extends Comparable<I>> implements Plan.Result<I> {
 
     @Override
     public boolean isMutationComplete() {
-        return remainingMutations.isEmpty();
+        return skipped || remainingMutations.isEmpty();
     }
 
     @SuppressWarnings("unchecked")
@@ -54,5 +59,13 @@ public class MutationResult<I extends Comparable<I>> implements Plan.Result<I> {
     @Override
     public MutagenException getException() {
         return exception;
+    }
+
+    public boolean isSkipped() {
+        return skipped;
+    }
+
+    public static <I extends Comparable<I>> MutationResult<I> empty() {
+        return new MutationResult<>(true);
     }
 }

@@ -1,6 +1,5 @@
 package com.toddfast.mutagen.cassandra.impl;
 
-import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.toddfast.mutagen.MutagenException;
 import com.toddfast.mutagen.State;
@@ -25,22 +24,11 @@ public class CQLMutation extends AbstractCassandraMutation {
 	 *
 	 *
 	 */
-	public CQLMutation(Session session, SchemaVersionDao schemaVersionDao, String resourceName) {
+	public CQLMutation(SessionHolder session, SchemaVersionDao schemaVersionDao, String resourceName) {
 		super(session, schemaVersionDao);
 		state = super.parseVersion(resourceName);
 		loadCQLStatements(resourceName);
 	}
-
-
-	/**
-	 *
-	 *
-	 */
-	@Override
-	protected String getChangeSummary() {
-		return source;
-	}
-
 
 	/**
 	 *
@@ -148,6 +136,11 @@ public class CQLMutation extends AbstractCassandraMutation {
 		return state;
 	}
 
+	@Override
+	public byte[] getFootprint() {
+		return source.getBytes();
+	}
+
 
 	/**
 	 *
@@ -163,16 +156,15 @@ public class CQLMutation extends AbstractCassandraMutation {
             try {
                 getSession().execute(statement);
             } catch (DriverException e) {
-                context.error("Exception executing CQL \"{}\"",statement,e);
+                context.error("Exception executing CQL {}",statement,e);
                 throw new MutagenException("Exception executing CQL \""+
                         statement+"\"",e);
             } catch (RuntimeException e) {
-				context.error("Exception executing CQL \"{}\"",statement,e);
+				context.error("Exception executing CQL {}",statement,e);
 				throw e;
 			}
-
-            context.info("Successfully executed CQL statement from mutation [{}]", fileName);
-            context.debug("Successfully executed CQL \"{}\"", statement);
+			context.info("Executed statement from mutation [{}].", state.getID());
+			context.debug("Successfully executed CQL {}", statement);
 		}
 
 		context.debug("Done executing mutation {}",state.getID());

@@ -5,8 +5,10 @@
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} userId:[%X{user-id}] request:[%X{req.method} %X{req.requestURL}] - %msg%n</pattern>
         </encoder>
     </appender>
+    <logger name="org.apache.cassandra" level="off"/>
+    <logger name="com.toddfast.mutagen.cassandra" level="info"/>
 
-    <root level="info">
+    <root level="warn">
         <appender-ref ref="STDOUT" />
     </root>
 </configuration>
