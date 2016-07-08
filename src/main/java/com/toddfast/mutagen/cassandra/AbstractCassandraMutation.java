@@ -122,9 +122,9 @@ public abstract class AbstractCassandraMutation implements Mutation<Integer> {
             ByteBuffer versionByteBuffer = ByteBuffer.allocate(4).putInt(version);
             versionByteBuffer.rewind();
             schemaVersionDao.add("state", "version", versionByteBuffer);
-            schemaVersionDao.add(String.format("%08d", version), "change", ByteBuffer.wrap(String.format("Mutation number: [%s]", version)
+            schemaVersionDao.add(String.format(SchemaVersionDao.VERSION_FORMATTER, version), "change", ByteBuffer.wrap(String.format("Mutation number: [%s]", version)
                                                                                                  .getBytes()));
-            schemaVersionDao.add(String.format("%08d", version), "hash", ByteBuffer.wrap(md5(classFootprint)));
+            schemaVersionDao.add(String.format(SchemaVersionDao.VERSION_FORMATTER, version), "hash", ByteBuffer.wrap(md5(classFootprint)));
         }
     }
 

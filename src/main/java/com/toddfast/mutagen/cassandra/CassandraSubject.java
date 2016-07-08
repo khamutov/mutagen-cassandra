@@ -8,7 +8,6 @@ import com.toddfast.mutagen.Subject;
 import com.toddfast.mutagen.basic.SimpleState;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
 import com.toddfast.mutagen.cassandra.impl.SessionHolder;
-import com.toddfast.mutagen.cassandra.table.SchemaConstants;
 import com.toddfast.mutagen.cassandra.table.SchemaVersion;
 
 import java.nio.ByteBuffer;
@@ -32,7 +31,7 @@ public class CassandraSubject implements Subject<Integer> {
     }
 
     private void createSchemaVersionTable() {
-        sessionHolder.get().execute(String.format(tableCreationQuery, sessionHolder.get().getLoggedKeyspace(), SchemaConstants.TABLE_SCHEMA_VERSION));
+        sessionHolder.get().execute(String.format(tableCreationQuery, sessionHolder.get().getLoggedKeyspace(), SchemaVersionDao.TABLE_SCHEMA_VERSION));
     }
 
     @Override

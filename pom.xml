@@ -4,7 +4,7 @@
 
     <groupId>com.toddfast.mutagen</groupId>
     <artifactId>mutagen-cassandra-tobox</artifactId>
-    <version>0.4.8-SNAPSHOT</version>
+    <version>0.5-tobox</version>
     <packaging>jar</packaging>
 
     <name>toddfast-mutagen-cassandra-tobox</name>
@@ -57,16 +57,40 @@
                 <version>2.7</version>
                 <executions>
                     <execution>
-                        <id>copy-resources-test</id>
+                        <id>copy-resources-test-main</id>
                         <phase>compile</phase>
                         <goals>
                             <goal>copy-resources</goal>
                         </goals>
                         <configuration>
-                            <outputDirectory>${basedir}/target/test-classes/com/toddfast/mutagen/cassandra/test/mutations</outputDirectory>
+                            <outputDirectory>
+                                ${basedir}/target/test-classes/com/toddfast/mutagen/cassandra/test/mutations
+                            </outputDirectory>
                             <resources>
                                 <resource>
                                     <directory>src/test/java/com/toddfast/mutagen/cassandra/test/mutations</directory>
+                                    <filtering>true</filtering>
+                                    <includes>
+                                        <include>**/*.java</include>
+                                        <include>**/*.cql</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-resources-test-missed</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>
+                                ${basedir}/target/test-classes/com/toddfast/mutagen/cassandra/test/missing
+                            </outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>src/test/java/com/toddfast/mutagen/cassandra/test/missing</directory>
                                     <filtering>true</filtering>
                                     <includes>
                                         <include>**/*.java</include>

@@ -4,11 +4,12 @@ package com.toddfast.mutagen.cassandra.table;
 import com.datastax.driver.mapping.annotations.ClusteringColumn;
 import com.datastax.driver.mapping.annotations.PartitionKey;
 import com.datastax.driver.mapping.annotations.Table;
+import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 
-@Table(name = SchemaConstants.TABLE_SCHEMA_VERSION)
+@Table(name = SchemaVersionDao.TABLE_SCHEMA_VERSION)
 public class SchemaVersion implements Serializable {
 
     @PartitionKey
