@@ -68,7 +68,7 @@ public class HashChecker {
      * @return check result
      */
     public boolean hasNewMutations() {
-        return hashes.stream().anyMatch(p -> p.resNode.mutationNumber > p.dbNode.mutationNumber);
+        return hashes.stream().anyMatch(p -> p.dbNode == null || (p.resNode.mutationNumber > p.dbNode.mutationNumber));
     }
 
     /**

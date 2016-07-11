@@ -10,6 +10,7 @@ import com.toddfast.mutagen.cassandra.CassandraMutagen;
 import com.toddfast.mutagen.cassandra.CassandraSubject;
 import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
 import com.toddfast.mutagen.cassandra.hash.HashChecker;
+import com.toddfast.mutagen.cassandra.premutation.MultiPremutationProcessor;
 import com.toddfast.mutagen.cassandra.premutation.Premutation;
 import com.toddfast.mutagen.cassandra.premutation.PremutationProcessor;
 import org.slf4j.Logger;
@@ -107,6 +108,11 @@ public class CassandraMutagenImpl implements CassandraMutagen {
                 || config.getMode() == CassandraMutagenConfig.Mode.FORCE_RANGE
                 || config.getMode() == CassandraMutagenConfig.Mode.FORCE_VERSION) {
                 return (MutationResult<Integer>) getPlan().execute();
+            } else if(config.premutationsEnabled()) {
+                List<Premutation> premutations = PremutationProcessor.loadPremutations(sessionHolder, premutationResources);
+                List<Mutation<Integer>> mutations = CassandraPlanner.loadMutations(sessionHolder, schemaVersionDao, config, mutationResources);
+                PremutationProcessor processor = new MultiPremutationProcessor(sessionHolder, premutations, mutations, subject, coordinator);
+                processor.execute();
             }
             return MutationResult.empty();
         }
