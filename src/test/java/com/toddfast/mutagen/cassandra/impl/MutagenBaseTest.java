@@ -22,6 +22,9 @@ public abstract class MutagenBaseTest {
     protected static final Logger log = LoggerFactory.getLogger(CassandraMutagenImplTest.class);
 
     protected static final String TEST_KEYSPACE = "mutagen_test";
+    protected static final String RESOURCES = "com/toddfast/mutagen/cassandra/test/mutations";
+    protected static final String PREMUTATIONS = "com/toddfast/mutagen/cassandra/test/premutations";
+    protected static final String RAW_RESOURCES = RESOURCES;
 
     protected static Cluster cluster;
     protected static Session session;
@@ -59,17 +62,14 @@ public abstract class MutagenBaseTest {
 
     protected MutationResult<Integer> mutate(CassandraMutagenConfig config)
         throws IOException {
+        return mutate(RESOURCES, PREMUTATIONS, RAW_RESOURCES, config);
+    }
 
-        // Initialize the list of mutations
-        String rootResourcePath = "com/toddfast/mutagen/cassandra/test/mutations";
-        String premutationsPath = "com/toddfast/mutagen/cassandra/test/premutations";
-
-
+    protected MutationResult<Integer> mutate(String resources, String premutations,
+                                             String rawResources, CassandraMutagenConfig config)
+        throws IOException {
         CassandraMutagenImpl mutagen = new CassandraMutagenImpl(session, config);
-        mutagen.initialize(rootResourcePath, premutationsPath, rootResourcePath);
-
-        // Mutate!
-
+        mutagen.initialize(resources, premutations, rawResources);
         return mutagen.mutate();
     }
 

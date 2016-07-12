@@ -5,7 +5,6 @@ import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.mapping.Mapper;
 import com.datastax.driver.mapping.MappingManager;
 import com.toddfast.mutagen.cassandra.impl.SessionHolder;
-import com.toddfast.mutagen.cassandra.table.SchemaConstants;
 import com.toddfast.mutagen.cassandra.table.SchemaVersion;
 
 import java.nio.ByteBuffer;
@@ -14,6 +13,8 @@ import java.util.List;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 public class SchemaVersionDao {
+    public static final String VERSION_FORMATTER = "%08d";
+    public static final String TABLE_SCHEMA_VERSION = "schema_version";
 
     private SessionHolder sessionHolder;
     private Mapper<SchemaVersion> schemaVersionMapper;
@@ -21,22 +22,16 @@ public class SchemaVersionDao {
     public SchemaVersionDao(SessionHolder sessionHolder) {
         this.sessionHolder = sessionHolder;
         this.schemaVersionMapper = new MappingManager(this.sessionHolder.get()).mapper(SchemaVersion.class);
-
-    }
-
-    public List<SchemaVersion> findAll() {
-        Select select = QueryBuilder.select().from(SchemaConstants.TABLE_SCHEMA_VERSION);
-        return schemaVersionMapper.map(sessionHolder.get().execute(select)).all();
     }
 
     public SchemaVersion findLastVersion() {
-        Select select = QueryBuilder.select().from(SchemaConstants.TABLE_SCHEMA_VERSION);
+        Select select = QueryBuilder.select().from(TABLE_SCHEMA_VERSION);
         select.where(eq("key", "state"));
         return schemaVersionMapper.map(sessionHolder.get().execute(select)).one();
     }
 
     public List<SchemaVersion> getHashes() {
-        Select select = QueryBuilder.select().from(SchemaConstants.TABLE_SCHEMA_VERSION);
+        Select select = QueryBuilder.select().from(TABLE_SCHEMA_VERSION);
         select.where(QueryBuilder.eq("column1", "hash"));
         select.allowFiltering();
         return schemaVersionMapper.map(sessionHolder.get().execute(select)).all();

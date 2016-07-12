@@ -5,7 +5,7 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.toddfast.mutagen.Plan;
 import com.toddfast.mutagen.State;
-import com.toddfast.mutagen.cassandra.table.SchemaConstants;
+import com.toddfast.mutagen.cassandra.dao.SchemaVersionDao;
 import org.junit.Test;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
@@ -53,7 +53,7 @@ public class CassandraMutagenImplTest extends MutagenBaseTest {
         assertEquals("a1", rowBefore.getString("value1"));
         assertEquals("a2", rowBefore.getString("value2"));
 
-        Select selectVersion = select().from(SchemaConstants.TABLE_SCHEMA_VERSION);
+        Select selectVersion = select().from(SchemaVersionDao.TABLE_SCHEMA_VERSION);
         selectVersion.where(eq("key", "state"));
         selectVersion.where(eq("column1", "version"));
 
@@ -76,7 +76,7 @@ public class CassandraMutagenImplTest extends MutagenBaseTest {
     public void testForceRangeMutate() throws Exception {
         testMutate(config());
 
-        Select selectVersion = select().from(SchemaConstants.TABLE_SCHEMA_VERSION);
+        Select selectVersion = select().from(SchemaVersionDao.TABLE_SCHEMA_VERSION);
         selectVersion.where(eq("key", "state"));
         selectVersion.where(eq("column1", "version"));
 
@@ -104,7 +104,7 @@ public class CassandraMutagenImplTest extends MutagenBaseTest {
         assertEquals("a1", rowBefore.getString("value1"));
         assertEquals("a2", rowBefore.getString("value2"));
 
-        Select selectVersion = select().from(SchemaConstants.TABLE_SCHEMA_VERSION);
+        Select selectVersion = select().from(SchemaVersionDao.TABLE_SCHEMA_VERSION);
         selectVersion.where(eq("key", "state"));
         selectVersion.where(eq("column1", "version"));
 

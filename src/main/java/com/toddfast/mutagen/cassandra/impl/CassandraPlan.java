@@ -8,6 +8,7 @@ import com.toddfast.mutagen.State;
 import com.toddfast.mutagen.Subject;
 import com.toddfast.mutagen.cassandra.premutation.Premutation;
 import com.toddfast.mutagen.cassandra.premutation.PremutationProcessor;
+import com.toddfast.mutagen.cassandra.premutation.SinglePremutationProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +76,7 @@ public class CassandraPlan implements Plan<Integer> {
             int mutationNumber = mutation.getResultingState().getID();
             try {
                 if (config.premutationsEnabled() && premutationMap.containsKey(mutationNumber)) {
-                    PremutationProcessor processor = new PremutationProcessor(sessionHolder, premutationMap.get(mutationNumber));
+                    SinglePremutationProcessor processor = new SinglePremutationProcessor(sessionHolder, premutationMap.get(mutationNumber));
                     processor.execute();
                     mutation.mutate(context);
                     processor.check();
