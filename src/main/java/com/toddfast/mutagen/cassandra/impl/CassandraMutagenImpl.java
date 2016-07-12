@@ -58,7 +58,9 @@ public class CassandraMutagenImpl implements CassandraMutagen {
 
     public void initialize(String mutationResourcePath, String premutationResourcePath, String rawMutationsPath)
         throws IOException {
-        this.mutationResources = locateSources(mutationResourcePath);
+        this.mutationResources = locateSources(mutationResourcePath).stream()
+                                                                    .filter(p -> p.endsWith(".cql") || p.endsWith(".class"))
+                                                                    .collect(Collectors.toList());
         this.mutationResources.forEach(res -> log.info("Found mutation resource {}", res));
         if (config.premutationsEnabled()) {
             this.premutationResources = locateSources(premutationResourcePath);
@@ -114,6 +116,7 @@ public class CassandraMutagenImpl implements CassandraMutagen {
                 PremutationProcessor processor = new MultiPremutationProcessor(sessionHolder, premutations, mutations, subject, coordinator);
                 processor.execute();
             }
+            log.warn("All mutation hashes are equal. Skipping mutation phase.");
             return MutationResult.empty();
         }
     }

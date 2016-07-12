@@ -18,36 +18,26 @@ import java.util.List;
  */
 public class CQLMutation extends AbstractCassandraMutation {
 
-    public static final Charset UTF8 = Charset.forName("UTF-8");
+	private String source;
+	private byte[] sourceBytes;
+	private State<Integer> state;
+	private List<String> statements = new ArrayList<>();
 
-	/**
-	 *
-	 *
-	 */
 	public CQLMutation(SessionHolder session, SchemaVersionDao schemaVersionDao, String resourceName) {
 		super(session, schemaVersionDao);
 		state = super.parseVersion(resourceName);
 		loadCQLStatements(resourceName);
 	}
 
-	/**
-	 *
-	 *
-	 */
 	private void loadCQLStatements(String resourceName) {
 
 		try {
-			source = loadResource(resourceName);
-			this.fileName = resourceName;
+			sourceBytes = loadResource(resourceName);
+			source = new String(sourceBytes);
 		}
 		catch (IOException e) {
 			throw new MutagenException("Could not load resource \""+
 				resourceName+"\"",e);
-		}
-
-		if (source==null) {
-			// File was empty
-			return;
 		}
 
 		String[] lines=source.split("\n");
@@ -88,12 +78,7 @@ public class CQLMutation extends AbstractCassandraMutation {
 
 	}
 
-
-	/**
-	 *
-	 *
-	 */
-	public String loadResource(String path)
+	private byte[] loadResource(String path)
 			throws IOException {
 
 		ClassLoader loader=Thread.currentThread().getContextClassLoader();
@@ -102,12 +87,6 @@ public class CQLMutation extends AbstractCassandraMutation {
 		}
 
 		InputStream input=loader.getResourceAsStream(path);
-		if (input==null) {
-			File file=new File(path);
-			if (file.exists()) {
-				input=new FileInputStream(file);
-			}
-		}
 
 		if (input==null) {
 			throw new IllegalArgumentException("Resource \""+
@@ -115,22 +94,13 @@ public class CQLMutation extends AbstractCassandraMutation {
 		}
 
 		try {
-			//todo: need refactoring
-			// isn't good solution, because OOM may occurred on reading big CQL file
-			// but more better than incomplete read of the file SILENTLY
-			return IOUtils.toString(input, UTF8);
+			return IOUtils.toByteArray(input);
 		}
 		finally {
 			IOUtils.closeQuietly(input);
 		}
 	}
 
-
-
-	/**
-	 *
-	 *
-	 */
 	@Override
 	public State<Integer> getResultingState() {
 		return state;
@@ -138,14 +108,9 @@ public class CQLMutation extends AbstractCassandraMutation {
 
 	@Override
 	public byte[] getFootprint() {
-		return source.getBytes();
+		return sourceBytes;
 	}
 
-
-	/**
-	 *
-	 *
-	 */
 	@Override
 	protected void performMutation(Context context) {
 		context.debug("Executing mutation {}",state.getID());
@@ -169,16 +134,4 @@ public class CQLMutation extends AbstractCassandraMutation {
 
 		context.debug("Done executing mutation {}",state.getID());
 	}
-
-
-
-
-	////////////////////////////////////////////////////////////////////////////
-	// Fields
-	////////////////////////////////////////////////////////////////////////////
-
-	private String fileName;
-	private String source;
-	private State<Integer> state;
-	private List<String> statements = new ArrayList<>();
 }
